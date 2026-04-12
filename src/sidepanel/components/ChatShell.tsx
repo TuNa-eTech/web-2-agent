@@ -25,6 +25,7 @@ import { ChatComposer } from "./ChatComposer";
 import { ChatTranscript } from "./ChatTranscript";
 import { ConfirmationGateCard } from "./ConfirmationGateCard";
 import { ToolActivityCard } from "./ToolActivityCard";
+import { ScrollArea } from "@radix-ui/react-scroll-area";
 
 type ChatShellProps = {
   state: ChatState;
@@ -91,66 +92,21 @@ export const ChatShell = ({
   return (
     <div className="min-h-screen p-3 md:p-4">
       <Card className="mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1320px] flex-col rounded-xl bg-white/86 md:min-h-[calc(100vh-2rem)]">
-        <CardHeader className="feature-glow gap-4 border-b border-white/70 pb-5">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-            <div className="max-w-3xl space-y-2">
-              <Badge className="bg-white/72 text-primary" variant="secondary">
-                AI workspace
-              </Badge>
-              <div>
-                <CardTitle className="text-xl sm:text-2xl">
-                  Assist, inspect, approve
-                </CardTitle>
-                <CardDescription className="mt-1 max-w-2xl text-sm leading-6">
-                  Keep the conversation readable, separate tool execution from chat intent, and
-                  require an explicit decision whenever the workflow reaches a risky action.
-                </CardDescription>
-              </div>
+        <CardHeader className="border-b px-4 py-3 sm:px-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <span className="flex size-7 items-center justify-center rounded-md bg-primary/10">
+                <Bot className="size-4 text-primary" />
+              </span>
+              <CardTitle className="text-base font-semibold">AI Workspace</CardTitle>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline">{state.providerId ?? "No provider"}</Badge>
               {state.model ? <Badge variant="outline">{state.model}</Badge> : null}
               <Badge variant={streamingBadgeVariant}>
                 {formatLabel(state.streaming.status)}
               </Badge>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <div className="flex-1 rounded-lg border border-white/65 bg-white/72 p-3 shadow-sm min-w-[200px]">
-              <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                <Bot className="size-3 text-primary" />
-                Messages
-              </div>
-              <div className="mt-1 flex items-baseline gap-2">
-                <div className="text-xl font-semibold">{state.messages.length}</div>
-                <div className="text-xs text-muted-foreground">in session</div>
-              </div>
-            </div>
-            <div className="flex-1 rounded-lg border border-white/65 bg-white/72 p-3 shadow-sm min-w-[200px]">
-              <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                <Wrench className="size-3 text-primary" />
-                Active tools
-              </div>
-              <div className="mt-1 flex items-baseline gap-2">
-                <div className="text-xl font-semibold">{activeToolCount}</div>
-                <div className="text-xs text-muted-foreground">queued/running</div>
-              </div>
-            </div>
-            <div className="flex-1 rounded-lg border border-white/65 bg-white/72 p-3 shadow-sm min-w-[200px]">
-              <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                <Sparkles className="size-3 text-primary" />
-                Approval gate
-              </div>
-              <div className="mt-1 flex items-baseline gap-2">
-                <div className="text-xl font-semibold">
-                  {state.pendingConfirmation ? "Open" : "Clear"}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {state.pendingConfirmation ? "waiting" : "none pending"}
-                </div>
-              </div>
             </div>
           </div>
         </CardHeader>

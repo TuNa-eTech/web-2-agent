@@ -30,57 +30,51 @@ export const RawJsonEditor = ({
   };
 
   return (
-    <section className="flex h-full flex-col gap-4">
-      <div className="feature-glow rounded-xl border border-white/70 p-4 shadow-sm">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div className="space-y-2">
-            <div className="text-sm font-semibold tracking-[0.01em] text-primary">
-              Config studio
-            </div>
-            <div>
-              <h2 className="text-foreground text-2xl font-semibold">Raw MCP Config</h2>
-              <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
-                Paste or edit the full `mcpServers` document. Secrets stay encrypted in storage,
-                while the preview pane stays redacted.
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              disabled={loading || saving || testing}
-              onClick={onReload}
-              type="button"
-              variant="outline"
-            >
-              {loading ? (
-                <LoaderCircle className="size-4 animate-spin" />
-              ) : (
-                <RefreshCw className="size-4" />
-              )}
-              Reload
-            </Button>
-            <Button
-              disabled={loading || saving || testing}
-              onClick={onTestConnections}
-              type="button"
-              variant="secondary"
-            >
-              {testing ? (
-                <LoaderCircle className="size-4 animate-spin" />
-              ) : (
-                <Rocket className="size-4" />
-              )}
-              {testing ? "Testing..." : "Test Connections"}
-            </Button>
-            <Button disabled={loading || saving || testing} onClick={onSave} type="button">
-              {saving ? (
-                <LoaderCircle className="size-4 animate-spin" />
-              ) : (
-                <Save className="size-4" />
-              )}
-              {saving ? "Saving..." : "Save Config"}
-            </Button>
-          </div>
+    <div className="flex h-full flex-col gap-4">
+      <div className="flex flex-col gap-4 border-b pb-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Raw Configuration</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Edit topology without exposing encrypted secrets to standard views.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            disabled={loading || saving || testing}
+            onClick={onReload}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            {loading ? (
+              <LoaderCircle className="mr-1.5 size-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-1.5 size-3.5" />
+            )}
+            Reload
+          </Button>
+          <Button
+            disabled={loading || saving || testing}
+            onClick={onTestConnections}
+            size="sm"
+            type="button"
+            variant="secondary"
+          >
+            {testing ? (
+              <LoaderCircle className="mr-1.5 size-3.5 animate-spin" />
+            ) : (
+              <Rocket className="mr-1.5 size-3.5" />
+            )}
+            {testing ? "Testing..." : "Test Connections"}
+          </Button>
+          <Button disabled={loading || saving || testing} onClick={onSave} size="sm" type="button">
+            {saving ? (
+              <LoaderCircle className="mr-1.5 size-3.5 animate-spin" />
+            ) : (
+              <Save className="mr-1.5 size-3.5" />
+            )}
+            {saving ? "Saving..." : "Save Config"}
+          </Button>
         </div>
       </div>
 
@@ -88,14 +82,14 @@ export const RawJsonEditor = ({
         <Label className="text-sm font-semibold tracking-[0.01em]" htmlFor="raw-json-editor">
           mcpServers.json
         </Label>
-        <div className="status-pill">
-          <span>{value.length.toLocaleString()} chars</span>
-        </div>
+        <span className="text-xs text-muted-foreground">
+          {value.length.toLocaleString()} chars
+        </span>
       </div>
 
-      <div className="app-surface rounded-xl bg-white/88 p-2">
+      <div className="flex-1 min-h-[500px] rounded-xl border bg-card p-2 shadow-sm">
         <Textarea
-          className="min-h-[560px] resize-y border-0 bg-white/70 px-5 py-5 font-mono text-[13px] leading-6 shadow-none focus-visible:ring-0"
+          className="h-full min-h-[500px] resize-none border-0 px-4 py-4 font-mono text-[13px] leading-6 shadow-none focus-visible:ring-0"
           disabled={loading}
           id="raw-json-editor"
           onChange={handleChange}
@@ -103,6 +97,6 @@ export const RawJsonEditor = ({
           value={value}
         />
       </div>
-    </section>
+    </div>
   );
 };

@@ -1,24 +1,16 @@
+import * as React from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  FileJson,
   Info,
-  PlugZap,
+  Server,
+  Settings,
   Shield,
-  Sparkles,
-  Workflow,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { useConfigConsole } from "../../shared/hooks/useConfigConsole";
-import { isPlainObject } from "../../shared/lib/objectUtils";
-import { formatLabel } from "../../shared/lib/uiPresentation";
 import { RawJsonEditor } from "../components/RawJsonEditor";
 import { RedactedConfigPreview } from "../components/RedactedConfigPreview";
 import { ServerSummaryList } from "../components/ServerSummaryList";
@@ -112,169 +104,116 @@ export const ConfigConsolePage = () => {
     reload,
   } = useConfigConsole();
 
-  const normalizedServers = serverIndex.filter((entry) => isPlainObject(entry));
-  const totalServers = normalizedServers.length;
-  const totalTools = Object.values(toolCatalog).reduce(
-    (sum, tools) => sum + (Array.isArray(tools) ? tools.length : 0),
-    0,
-  );
-  const connectedServers = normalizedServers.filter((entry) => {
-    const id = typeof entry.id === "string" ? entry.id : null;
-    const health = id && isPlainObject(healthMap[id]) ? healthMap[id] : null;
-    const state =
-      health && typeof health.state === "string"
-        ? health.state
-        : typeof entry.status === "string"
-          ? entry.status
-          : "draft";
-
-    return state === "connected";
-  }).length;
-  const issueCount = normalizedServers.filter((entry) => {
-    const id = typeof entry.id === "string" ? entry.id : null;
-    const health = id && isPlainObject(healthMap[id]) ? healthMap[id] : null;
-    const state =
-      health && typeof health.state === "string"
-        ? health.state
-        : typeof entry.status === "string"
-          ? entry.status
-          : "draft";
-
-    return state === "failed" || state === "degraded";
-  }).length;
-  const presetSummary = Array.from(
-    new Set(
-      normalizedServers.flatMap((entry) => {
-        const preset = typeof entry.preset === "string" ? entry.preset : null;
-        return preset ? [preset] : [];
-      }),
-    ),
-  );
+  const [activeTab, setActiveTab] = React.useState<"editor" | "servers" | "preview">("editor");
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-[1540px] flex-col gap-5 px-4 py-5 lg:px-6 lg:py-6">
-      <Card className="feature-glow rounded-xl border-white/70">
-        <CardHeader className="gap-6">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div className="max-w-3xl space-y-4">
-              <Badge className="bg-white/72 text-primary" variant="secondary">
-                MCP control plane
-              </Badge>
-              <div>
-                <CardTitle className="text-3xl sm:text-4xl">
-                  Config Console
-                </CardTitle>
-                <CardDescription className="mt-3 max-w-2xl text-base leading-7">
-                  A safer workspace for editing MCP topology, testing live connectivity, and
-                  reviewing what the extension will expose without decrypting secrets into the UI.
-                </CardDescription>
-              </div>
+    <main className="flex min-h-screen bg-muted/20">
+      {/* Left Sidebar */}
+      <aside className="flex w-[280px] flex-col border-r bg-background/50 backdrop-blur-sm">
+        <div className="border-b p-6">
+          <div className="flex items-center gap-3">
+            <div className="rounded-md bg-primary p-2 text-primary-foreground shadow-sm">
+              <Settings className="size-5" />
             </div>
-
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-lg border border-white/65 bg-white/74 p-3 shadow-sm">
-                <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <PlugZap className="size-4 text-primary" />
-                  Connected
-                </div>
-                <div className="mt-2 text-3xl font-semibold">{connectedServers}</div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  of {totalServers} servers
-                </div>
-              </div>
-              <div className="rounded-lg border border-white/65 bg-white/74 p-3 shadow-sm">
-                <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <Workflow className="size-4 text-primary" />
-                  Tools
-                </div>
-                <div className="mt-2 text-3xl font-semibold">{totalTools}</div>
-                <div className="mt-1 text-xs text-muted-foreground">catalogued actions</div>
-              </div>
-              <div className="rounded-lg border border-white/65 bg-white/74 p-3 shadow-sm">
-                <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <Shield className="size-4 text-primary" />
-                  Protected
-                </div>
-                <div className="mt-2 text-3xl font-semibold">
-                  {redactedPreview ? "Yes" : "Pending"}
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">preview redaction</div>
-              </div>
-              <div className="rounded-lg border border-white/65 bg-white/74 p-3 shadow-sm">
-                <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <Sparkles className="size-4 text-primary" />
-                  Presets
-                </div>
-                <div className="mt-2 text-3xl font-semibold">
-                  {presetSummary.length || 0}
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  {presetSummary.length > 0
-                    ? presetSummary.map((preset) => formatLabel(preset)).join(", ")
-                    : "none detected"}
-                </div>
-              </div>
+            <div>
+              <h1 className="text-lg font-bold tracking-tight">Settings</h1>
+              <p className="text-xs text-muted-foreground">Config console</p>
             </div>
           </div>
+        </div>
+        
+        <nav className="flex flex-col gap-1.5 p-4">
+          <Button 
+            className="h-10 justify-start font-medium" 
+            onClick={() => setActiveTab("editor")}
+            variant={activeTab === "editor" ? "secondary" : "ghost"} 
+          >
+            <FileJson className="mr-3 size-4" />
+            MCP Configuration
+          </Button>
 
-          <div className="flex flex-wrap gap-2">
-            <div className="status-pill">{loading ? "Loading config..." : "Document loaded"}</div>
-            <div className="status-pill">
-              {saving ? "Persisting encrypted storage..." : "Storage synced"}
-            </div>
-            <div className="status-pill">
-              {testing ? "Running connectivity checks..." : `${issueCount} health issues`}
-            </div>
+          <Button 
+            className="h-10 justify-start font-medium" 
+            onClick={() => setActiveTab("servers")}
+            variant={activeTab === "servers" ? "secondary" : "ghost"} 
+          >
+            <Server className="mr-3 size-4" />
+            Connections
+            {serverIndex.length > 0 && (
+              <Badge className="ml-auto px-1.5 font-mono text-[10px]" variant="outline">{serverIndex.length}</Badge>
+            )}
+          </Button>
+
+          <Button 
+            className="h-10 justify-start font-medium" 
+            onClick={() => setActiveTab("preview")}
+            variant={activeTab === "preview" ? "secondary" : "ghost"} 
+          >
+            <Shield className="mr-3 size-4" />
+            Security Preview
+          </Button>
+        </nav>
+
+        <div className="mt-auto border-t px-6 py-5 text-xs text-muted-foreground">
+          <div className="flex flex-col gap-2">
+             <div className="flex items-center justify-between">
+                <span>Core sync</span>
+                {saving || testing || loading ? 
+                   <Badge className="border-0 bg-primary/10 text-primary hover:bg-primary/10" variant="secondary">Syncing</Badge> : 
+                   <Badge className="border-0 bg-success/15 text-success hover:bg-success/15" variant="secondary">Ready</Badge>}
+             </div>
           </div>
-        </CardHeader>
-      </Card>
+        </div>
+      </aside>
 
-      <ErrorBanner errors={errors} />
-      <NoticeBanner notice={runtimeNotice} />
-
-      <div className="grid flex-1 gap-6 xl:grid-cols-[minmax(0,1.45fr)_430px]">
-        <RawJsonEditor
-          loading={loading}
-          onChange={updateRawJson}
-          onReload={reload}
-          onSave={save}
-          onTestConnections={testConnections}
-          saving={saving}
-          testing={testing}
-          value={rawJson}
-        />
-
-        <Card className="rounded-xl bg-white/86">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <CardTitle className="text-xl">Operational sidebar</CardTitle>
-                <CardDescription className="mt-1">
-                  Flip between runtime inventory and a safe preview of the effective document.
-                </CardDescription>
-              </div>
-              <Badge variant="outline">read-only views</Badge>
+      {/* Main Content Pane */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background">
+        <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-8 py-8">
+          
+          {(errors.length > 0 || runtimeNotice) && (
+            <div className="flex shrink-0 flex-col gap-4">
+               <ErrorBanner errors={errors} />
+               <NoticeBanner notice={runtimeNotice} />
             </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <Tabs className="flex flex-col" defaultValue="servers">
-              <TabsList className="w-full justify-start">
-                <TabsTrigger value="servers">Servers</TabsTrigger>
-                <TabsTrigger value="preview">Preview</TabsTrigger>
-              </TabsList>
-              <TabsContent value="servers">
-                <ServerSummaryList
-                  healthMap={healthMap}
-                  serverIndex={serverIndex}
-                  toolCatalog={toolCatalog}
+          )}
+
+          <div className="flex-1 min-h-0 bg-background rounded-xl">
+             {activeTab === "editor" && (
+                <RawJsonEditor
+                  loading={loading}
+                  onChange={updateRawJson}
+                  onReload={reload}
+                  onSave={save}
+                  onTestConnections={testConnections}
+                  saving={saving}
+                  testing={testing}
+                  value={rawJson}
                 />
-              </TabsContent>
-              <TabsContent value="preview">
-                <RedactedConfigPreview preview={redactedPreview} />
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+             )}
+             {activeTab === "servers" && (
+                <div className="flex h-full flex-col gap-4">
+                  <div className="border-b pb-4">
+                     <h2 className="text-lg font-semibold">Server Connections</h2>
+                     <p className="mt-1 text-sm text-muted-foreground">Monitor health state and available tool catalogs across all configured targets.</p>
+                  </div>
+                  <ServerSummaryList
+                    healthMap={healthMap}
+                    serverIndex={serverIndex}
+                    toolCatalog={toolCatalog}
+                  />
+                </div>
+             )}
+             {activeTab === "preview" && (
+                <div className="flex h-full flex-col gap-4">
+                   <div className="border-b pb-4">
+                     <h2 className="text-lg font-semibold">Security Preview</h2>
+                     <p className="mt-1 text-sm text-muted-foreground">Verify what gets exposed to the inference engine (secrets are dynamically masked).</p>
+                  </div>
+                  <RedactedConfigPreview preview={redactedPreview} />
+                </div>
+             )}
+          </div>
+        </div>
       </div>
     </main>
   );

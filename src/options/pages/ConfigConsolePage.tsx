@@ -112,9 +112,9 @@ export const ConfigConsolePage = () => {
   const [activeTab, setActiveTab] = React.useState<"editor" | "servers" | "providers" | "preview">("editor");
 
   return (
-    <main className="flex min-h-screen bg-muted/20">
+    <main className="flex h-screen w-full overflow-hidden bg-muted/20">
       {/* Left Sidebar */}
-      <aside className="flex w-[280px] flex-col border-r bg-background/50 backdrop-blur-sm">
+      <aside className="shrink-0 flex w-[280px] flex-col border-r bg-background/50 backdrop-blur-sm">
         <div className="border-b p-6">
           <div className="flex items-center gap-3">
             <div className="rounded-md bg-primary p-2 text-primary-foreground shadow-sm">

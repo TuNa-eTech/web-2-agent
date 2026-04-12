@@ -1,7 +1,6 @@
 import * as React from "react";
 import { Cable, ChevronDown, ChevronRight, KeyRound, Server, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { formatLabel, formatTimestamp, getConnectionBadgeVariant } from "@/shared/lib/uiPresentation";
 import { isPlainObject } from "../../shared/lib/objectUtils";
@@ -46,7 +45,7 @@ export const ServerSummaryList = ({
         </div>
       </header>
 
-      <ScrollArea className="h-[540px] pr-3">
+      <div>
         <div className="grid gap-3">
           {serverIndex.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border/90 bg-muted/55 p-4 text-sm text-muted-foreground">
@@ -222,7 +221,7 @@ export const ServerSummaryList = ({
             })
           )}
         </div>
-      </ScrollArea>
+      </div>
     </section>
   );
 };

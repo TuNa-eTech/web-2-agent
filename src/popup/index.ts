@@ -1,48 +1,16 @@
-import {
-  loadConnectionHealthMap,
-  loadServerIndex,
-  loadToolCatalog,
-} from "../core/storage/configStorage";
-import { buildPopupState, renderPopup } from "./pages/popup";
+import { StrictMode, createElement } from "react";
+import { createRoot } from "react-dom/client";
+import { App } from "./App";
+import "../styles/globals.css";
 
-const root = document.getElementById("app") ?? document.body;
+document.body.dataset.surface = "popup";
 
-const wirePopupShortcuts = (container: HTMLElement) => {
-  container
-    .querySelector<HTMLButtonElement>("#open-options")
-    ?.addEventListener("click", () => {
-      chrome.runtime?.sendMessage?.({ type: "popup:open-options" });
-    });
+const container = document.getElementById("app");
 
-  container
-    .querySelector<HTMLButtonElement>("#open-sidepanel")
-    ?.addEventListener("click", () => {
-      chrome.runtime?.sendMessage?.({ type: "popup:open-sidepanel" });
-    });
+if (!container) {
+  throw new Error("Popup root element not found.");
+}
 
-  container
-    .querySelectorAll<HTMLButtonElement>(".quick-action")
-    .forEach((button) => {
-      button.addEventListener("click", () => {
-        chrome.runtime?.sendMessage?.({
-          type: "popup:open-sidepanel",
-          serverId: button.dataset.serverId,
-          actionId: button.dataset.actionId,
-        });
-      });
-    });
-};
-
-const bootstrapPopup = async () => {
-  const [serverIndex, healthMap, toolCatalog] = await Promise.all([
-    loadServerIndex(),
-    loadConnectionHealthMap(),
-    loadToolCatalog(),
-  ]);
-
-  renderPopup(buildPopupState(serverIndex, healthMap, toolCatalog), root);
-  wirePopupShortcuts(root);
-  chrome.runtime?.sendMessage?.({ type: "popup:ping" });
-};
-
-void bootstrapPopup();
+createRoot(container).render(
+  createElement(StrictMode, null, createElement(App)),
+);

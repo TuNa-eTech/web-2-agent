@@ -1,4 +1,20 @@
-import * as React from "react";
+import {
+  AlertTriangle,
+  Bot,
+  CheckCircle2,
+  Sparkles,
+  Wrench,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatLabel } from "@/shared/lib/uiPresentation";
 import type {
   AiSurfaceError,
   ChatState,
@@ -17,20 +33,43 @@ type ChatShellProps = {
 };
 
 const ErrorNotice = ({ error }: { error: AiSurfaceError }) => (
-  <div className={`ChatError ChatError--${error.source}`}>
-    <strong>{error.source}</strong>
-    <span>{error.message}</span>
+  <div className="rounded-[22px] border border-destructive/20 bg-destructive/7 p-4">
+    <div className="flex items-start gap-3">
+      <AlertTriangle className="mt-0.5 size-5 text-destructive" />
+      <div>
+        <div className="text-sm font-semibold text-destructive">
+          {formatLabel(error.source)}
+        </div>
+        <div className="mt-1 text-sm text-destructive/90">{error.message}</div>
+      </div>
+    </div>
   </div>
 );
 
 const ToolActivityList = ({ items }: { items: ToolActivity[] }) => (
-  <div className="ToolActivityList">
-    {items.length === 0 ? (
-      <div className="ToolActivityList__empty">No tool activity yet.</div>
-    ) : null}
-    {items.map((activity) => (
-      <ToolActivityCard key={activity.id} activity={activity} />
-    ))}
+  <div className="app-surface flex h-full min-h-[420px] flex-col overflow-hidden rounded-[30px] bg-white/86">
+    <div className="flex items-center justify-between gap-3 border-b border-border/70 px-5 py-4">
+      <div>
+        <div className="text-sm font-semibold tracking-[0.01em]">Tool Activity</div>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Inspect queue state, payloads, outputs, and failures in one place.
+        </p>
+      </div>
+      <Badge variant="outline">{items.length} events</Badge>
+    </div>
+    <ScrollArea className="min-h-0 flex-1 pr-3">
+      <div className="grid gap-3 p-4">
+        {items.length === 0 ? (
+          <div className="rounded-[22px] border border-dashed border-border/90 bg-muted/55 p-5 text-sm text-muted-foreground">
+            No tool activity yet.
+          </div>
+        ) : (
+          items.map((activity) => (
+            <ToolActivityCard activity={activity} key={activity.id} />
+          ))
+        )}
+      </div>
+    </ScrollArea>
   </div>
 );
 
@@ -39,47 +78,123 @@ export const ChatShell = ({
   onSend,
   onConfirmTool,
 }: ChatShellProps) => {
+  const activeToolCount = state.toolActivity.filter((activity) =>
+    ["queued", "running", "awaiting-confirmation"].includes(activity.status),
+  ).length;
+  const streamingBadgeVariant =
+    state.streaming.status === "error"
+      ? "destructive"
+      : state.streaming.status === "streaming" || state.streaming.status === "waiting"
+        ? "warning"
+        : "outline";
+
   return (
-    <div className="ChatShell">
-      <header className="ChatShell__header">
-        <div>
-          <h2>AI Workspace</h2>
-          <div className="ChatShell__sub">
-            {state.providerId ?? "No provider"}{" "}
-            {state.model ? `• ${state.model}` : ""}
+    <div className="min-h-screen p-4 md:p-5">
+      <Card className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-[1320px] flex-col rounded-[36px] bg-white/86 md:min-h-[calc(100vh-2.5rem)]">
+        <CardHeader className="feature-glow gap-6 border-b border-white/70 pb-6">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-3xl space-y-4">
+              <Badge className="bg-white/72 text-primary" variant="secondary">
+                AI workspace
+              </Badge>
+              <div>
+                <CardTitle className="text-3xl sm:text-4xl">
+                  Assist, inspect, approve
+                </CardTitle>
+                <CardDescription className="mt-3 max-w-2xl text-base leading-7">
+                  Keep the conversation readable, separate tool execution from chat intent, and
+                  require an explicit decision whenever the workflow reaches a risky action.
+                </CardDescription>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline">{state.providerId ?? "No provider"}</Badge>
+              {state.model ? <Badge variant="outline">{state.model}</Badge> : null}
+              <Badge variant={streamingBadgeVariant}>
+                {formatLabel(state.streaming.status)}
+              </Badge>
+            </div>
           </div>
-        </div>
-        <div className={`ChatShell__status ChatShell__status--${state.streaming.status}`}>
-          {state.streaming.status}
-        </div>
-      </header>
 
-      {state.errors.length ? (
-        <div className="ChatShell__errors">
-          {state.errors.map((error, index) => (
-            <ErrorNotice key={`${error.source}-${index}`} error={error} />
-          ))}
-        </div>
-      ) : null}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-[24px] border border-white/65 bg-white/72 p-4 shadow-sm">
+              <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Bot className="size-4 text-primary" />
+                Messages
+              </div>
+              <div className="mt-2 text-3xl font-semibold">{state.messages.length}</div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                visible in the current session
+              </div>
+            </div>
+            <div className="rounded-[24px] border border-white/65 bg-white/72 p-4 shadow-sm">
+              <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Wrench className="size-4 text-primary" />
+                Active tools
+              </div>
+              <div className="mt-2 text-3xl font-semibold">{activeToolCount}</div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                queued, running, or awaiting approval
+              </div>
+            </div>
+            <div className="rounded-[24px] border border-white/65 bg-white/72 p-4 shadow-sm">
+              <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Sparkles className="size-4 text-primary" />
+                Approval gate
+              </div>
+              <div className="mt-2 text-3xl font-semibold">
+                {state.pendingConfirmation ? "Open" : "Clear"}
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {state.pendingConfirmation
+                  ? "waiting for a decision"
+                  : "no pending confirmations"}
+              </div>
+            </div>
+          </div>
+        </CardHeader>
 
-      <ChatTranscript messages={state.messages} />
+        <CardContent className="flex min-h-0 flex-1 flex-col gap-4 pt-6">
+          {state.errors.length > 0 ? (
+            <div className="grid gap-3">
+              {state.errors.map((error, index) => (
+                <ErrorNotice error={error} key={`${error.source}-${index}`} />
+              ))}
+            </div>
+          ) : (
+            <div className="status-pill w-fit">
+              <CheckCircle2 className="size-3.5 text-success" />
+              <span>No runtime errors in this session.</span>
+            </div>
+          )}
 
-      <section className="ChatShell__activity">
-        <h3>Tool Activity</h3>
-        <ToolActivityList items={state.toolActivity} />
-      </section>
+          <Tabs className="flex min-h-0 flex-1 flex-col" defaultValue="conversation">
+            <TabsList className="w-full justify-start">
+              <TabsTrigger value="conversation">Conversation</TabsTrigger>
+              <TabsTrigger value="activity">Tool Activity</TabsTrigger>
+            </TabsList>
+            <TabsContent className="min-h-0 flex-1" value="conversation">
+              <ChatTranscript messages={state.messages} />
+            </TabsContent>
+            <TabsContent className="min-h-0 flex-1" value="activity">
+              <ToolActivityList items={state.toolActivity} />
+            </TabsContent>
+          </Tabs>
 
-      {state.pendingConfirmation ? (
-        <ConfirmationGateCard
-          request={state.pendingConfirmation}
-          onDecision={onConfirmTool}
-        />
-      ) : null}
+          {state.pendingConfirmation ? (
+            <ConfirmationGateCard
+              onDecision={onConfirmTool}
+              request={state.pendingConfirmation}
+            />
+          ) : null}
 
-      <ChatComposer
-        onSend={onSend}
-        disabled={state.streaming.status === "streaming"}
-      />
+          <ChatComposer
+            disabled={state.streaming.status === "streaming"}
+            onSend={onSend}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 };

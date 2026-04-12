@@ -1,6 +1,9 @@
 import { StrictMode, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { ChatPage } from "./pages/ChatPage";
+import "../styles/globals.css";
+
+document.body.dataset.surface = "sidepanel";
 
 const container = document.getElementById("app");
 

@@ -1,10 +1,8 @@
-import * as React from "react";
-
 export const StreamingMessage = () => {
   return (
-    <div className="ChatMessage__streaming">
-      <span className="ChatMessage__streaming-dot">•</span>
-      <span>Streaming...</span>
+    <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-background/70 px-3 py-1 text-xs font-medium text-muted-foreground">
+      <span className="size-2 animate-pulse rounded-full bg-primary" />
+      <span>Streaming response...</span>
     </div>
   );
 };

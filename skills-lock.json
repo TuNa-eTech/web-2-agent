@@ -15,6 +15,11 @@
       "source": "mrsekut/agent-skills",
       "sourceType": "github",
       "computedHash": "e28a342200799bb1da7acf9d65306a31a323b7b17b5d179c73f68dfa976851c2"
+    },
+    "shadcn-ui": {
+      "source": "bobmatnyc/claude-mpm-skills",
+      "sourceType": "github",
+      "computedHash": "99423c3803617c6e4cbf8c4ee3250b781deb9c79a971cea8ac23dd56fcf128a0"
     }
   }
 }

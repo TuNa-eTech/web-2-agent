@@ -1,4 +1,15 @@
-import * as React from "react";
+import { ShieldAlert } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { formatLabel, formatTimestamp, getRiskBadgeVariant } from "@/shared/lib/uiPresentation";
 import type { ConfirmationDecision, ConfirmationRequest } from "../../core/ai";
 
 type ConfirmationGateCardProps = {
@@ -11,29 +22,74 @@ export const ConfirmationGateCard = ({
   onDecision,
 }: ConfirmationGateCardProps) => {
   return (
-    <div className="ConfirmationGate">
-      <div className="ConfirmationGate__header">
-        <strong>Confirm tool execution</strong>
-        <span className="ConfirmationGate__risk">{request.risk}</span>
-      </div>
-      <div className="ConfirmationGate__body">
-        <div>
-          Tool: <strong>{request.toolName}</strong>
+    <Card className="rounded-[30px] border-warning/25 bg-warning/10">
+      <CardHeader className="pb-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 text-sm font-semibold text-warning-foreground">
+              <ShieldAlert className="size-4" />
+              Manual approval required
+            </div>
+            <div>
+              <CardTitle className="text-xl">Confirm tool execution</CardTitle>
+              <CardDescription className="mt-2 max-w-2xl">
+                Review the payload before allowing a risky or unknown tool call to proceed.
+              </CardDescription>
+            </div>
+          </div>
+          <Badge variant={getRiskBadgeVariant(request.risk)}>
+            {formatLabel(request.risk)}
+          </Badge>
         </div>
-        <div>Server: {request.serverId}</div>
-        <div className="ConfirmationGate__reason">{request.reason}</div>
-        <pre className="ConfirmationGate__payload">
-          {JSON.stringify(request.input, null, 2)}
-        </pre>
-      </div>
-      <div className="ConfirmationGate__actions">
-        <button type="button" onClick={() => onDecision("approved")}>
-          Allow
-        </button>
-        <button type="button" onClick={() => onDecision("denied")}>
-          Deny
-        </button>
-      </div>
-    </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-[22px] border border-white/70 bg-white/70 p-4">
+            <div className="text-xs font-semibold tracking-[0.02em] text-muted-foreground uppercase">
+              Tool
+            </div>
+            <div className="mt-2 text-sm font-semibold">{request.toolName}</div>
+          </div>
+          <div className="rounded-[22px] border border-white/70 bg-white/70 p-4">
+            <div className="text-xs font-semibold tracking-[0.02em] text-muted-foreground uppercase">
+              Server
+            </div>
+            <div className="mt-2 text-sm font-semibold">{request.serverId}</div>
+          </div>
+          <div className="rounded-[22px] border border-white/70 bg-white/70 p-4">
+            <div className="text-xs font-semibold tracking-[0.02em] text-muted-foreground uppercase">
+              Requested
+            </div>
+            <div className="mt-2 text-sm font-semibold">
+              {formatTimestamp(request.requestedAt)}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[22px] border border-border/70 bg-white/70 p-4 text-sm leading-6">
+          {request.reason}
+        </div>
+
+        <div className="code-panel overflow-hidden rounded-[24px]">
+          <div className="border-b border-border/70 px-5 py-3 text-xs font-semibold tracking-[0.02em] text-muted-foreground uppercase">
+            Payload
+          </div>
+          <ScrollArea className="h-40">
+            <pre className="m-0 p-5 text-xs leading-6 whitespace-pre-wrap break-words">
+              {JSON.stringify(request.input, null, 2)}
+            </pre>
+          </ScrollArea>
+        </div>
+
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button onClick={() => onDecision("denied")} type="button" variant="destructive">
+            Deny
+          </Button>
+          <Button onClick={() => onDecision("approved")} type="button">
+            Allow tool
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 };

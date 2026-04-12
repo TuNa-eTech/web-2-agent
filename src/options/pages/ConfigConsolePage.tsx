@@ -1,7 +1,27 @@
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+  PlugZap,
+  Shield,
+  Sparkles,
+  Workflow,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useConfigConsole } from "../../shared/hooks/useConfigConsole";
+import { isPlainObject } from "../../shared/lib/objectUtils";
+import { formatLabel } from "../../shared/lib/uiPresentation";
 import { RawJsonEditor } from "../components/RawJsonEditor";
 import { RedactedConfigPreview } from "../components/RedactedConfigPreview";
 import { ServerSummaryList } from "../components/ServerSummaryList";
-import { useConfigConsole } from "../../shared/hooks/useConfigConsole";
 
 const ErrorBanner = ({
   errors,
@@ -9,27 +29,26 @@ const ErrorBanner = ({
   errors: { code: string; message: string; serverId?: string; path?: string }[];
 }) => {
   if (errors.length === 0) return null;
+
   return (
-    <section
-      style={{
-        border: "1px solid #ffb4b4",
-        background: "#fff5f5",
-        padding: 12,
-        borderRadius: 10,
-        color: "#7a1f1f",
-        fontSize: 13,
-      }}
-    >
-      <strong style={{ display: "block", marginBottom: 6 }}>Validation errors</strong>
-      {errors.map((error, index) => {
-        const location = error.serverId ? `(${error.serverId})` : "";
-        return (
-          <div key={`${error.code}-${index}`}>
-            {error.message} {location}
+    <div className="rounded-[26px] border border-destructive/20 bg-destructive/7 p-4">
+      <div className="flex items-start gap-3">
+        <AlertTriangle className="mt-0.5 size-5 text-destructive" />
+        <div className="space-y-2">
+          <div className="text-sm font-semibold text-destructive">
+            Validation errors
           </div>
-        );
-      })}
-    </section>
+          <div className="grid gap-2">
+            {errors.map((error, index) => (
+              <div className="text-sm text-destructive/90" key={`${error.code}-${index}`}>
+                {error.message}
+                {error.serverId ? ` (${error.serverId})` : ""}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -43,26 +62,35 @@ const NoticeBanner = ({
 }) => {
   if (!notice) return null;
 
-  const palette =
+  const tone =
     notice.tone === "success"
-      ? { border: "#a7f3d0", background: "#ecfdf3", color: "#166534" }
+      ? {
+          icon: <CheckCircle2 className="mt-0.5 size-5 text-success" />,
+          className: "border-success/20 bg-success/10 text-success",
+          title: "Runtime update",
+        }
       : notice.tone === "error"
-        ? { border: "#fecaca", background: "#fef2f2", color: "#991b1b" }
-        : { border: "#cbd5e1", background: "#f8fafc", color: "#334155" };
+        ? {
+            icon: <AlertTriangle className="mt-0.5 size-5 text-destructive" />,
+            className: "border-destructive/20 bg-destructive/7 text-destructive",
+            title: "Runtime error",
+          }
+        : {
+            icon: <Info className="mt-0.5 size-5 text-primary" />,
+            className: "border-primary/15 bg-primary/8 text-foreground",
+            title: "Runtime notice",
+          };
 
   return (
-    <section
-      style={{
-        border: `1px solid ${palette.border}`,
-        background: palette.background,
-        padding: 12,
-        borderRadius: 10,
-        color: palette.color,
-        fontSize: 13,
-      }}
-    >
-      {notice.message}
-    </section>
+    <div className={`rounded-[26px] border p-4 ${tone.className}`}>
+      <div className="flex items-start gap-3">
+        {tone.icon}
+        <div>
+          <div className="text-sm font-semibold">{tone.title}</div>
+          <div className="mt-1 text-sm opacity-90">{notice.message}</div>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -84,48 +112,170 @@ export const ConfigConsolePage = () => {
     reload,
   } = useConfigConsole();
 
+  const normalizedServers = serverIndex.filter((entry) => isPlainObject(entry));
+  const totalServers = normalizedServers.length;
+  const totalTools = Object.values(toolCatalog).reduce(
+    (sum, tools) => sum + (Array.isArray(tools) ? tools.length : 0),
+    0,
+  );
+  const connectedServers = normalizedServers.filter((entry) => {
+    const id = typeof entry.id === "string" ? entry.id : null;
+    const health = id && isPlainObject(healthMap[id]) ? healthMap[id] : null;
+    const state =
+      health && typeof health.state === "string"
+        ? health.state
+        : typeof entry.status === "string"
+          ? entry.status
+          : "draft";
+
+    return state === "connected";
+  }).length;
+  const issueCount = normalizedServers.filter((entry) => {
+    const id = typeof entry.id === "string" ? entry.id : null;
+    const health = id && isPlainObject(healthMap[id]) ? healthMap[id] : null;
+    const state =
+      health && typeof health.state === "string"
+        ? health.state
+        : typeof entry.status === "string"
+          ? entry.status
+          : "draft";
+
+    return state === "failed" || state === "degraded";
+  }).length;
+  const presetSummary = Array.from(
+    new Set(
+      normalizedServers.flatMap((entry) => {
+        const preset = typeof entry.preset === "string" ? entry.preset : null;
+        return preset ? [preset] : [];
+      }),
+    ),
+  );
+
   return (
-    <main
-      style={{
-        padding: "32px 40px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 20,
-        minHeight: "100vh",
-        background: "linear-gradient(180deg, #f7f7fa 0%, #ffffff 100%)",
-      }}
-    >
-      <header style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <h1 style={{ margin: 0, fontSize: 24 }}>MCP Config Console</h1>
-        <p style={{ margin: 0, color: "#5f6368", fontSize: 14 }}>
-          Manage MCP servers with a raw JSON document. Server summaries are rendered from a safe
-          index without decrypting secrets.
-        </p>
-      </header>
+    <main className="mx-auto flex min-h-screen w-full max-w-[1540px] flex-col gap-6 px-5 py-6 lg:px-8 lg:py-8">
+      <Card className="feature-glow rounded-[38px] border-white/70">
+        <CardHeader className="gap-6">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-3xl space-y-4">
+              <Badge className="bg-white/72 text-primary" variant="secondary">
+                MCP control plane
+              </Badge>
+              <div>
+                <CardTitle className="text-3xl sm:text-4xl">
+                  Config Console
+                </CardTitle>
+                <CardDescription className="mt-3 max-w-2xl text-base leading-7">
+                  A safer workspace for editing MCP topology, testing live connectivity, and
+                  reviewing what the extension will expose without decrypting secrets into the UI.
+                </CardDescription>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-[24px] border border-white/65 bg-white/74 p-4 shadow-sm">
+                <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <PlugZap className="size-4 text-primary" />
+                  Connected
+                </div>
+                <div className="mt-2 text-3xl font-semibold">{connectedServers}</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  of {totalServers} servers
+                </div>
+              </div>
+              <div className="rounded-[24px] border border-white/65 bg-white/74 p-4 shadow-sm">
+                <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Workflow className="size-4 text-primary" />
+                  Tools
+                </div>
+                <div className="mt-2 text-3xl font-semibold">{totalTools}</div>
+                <div className="mt-1 text-xs text-muted-foreground">catalogued actions</div>
+              </div>
+              <div className="rounded-[24px] border border-white/65 bg-white/74 p-4 shadow-sm">
+                <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Shield className="size-4 text-primary" />
+                  Protected
+                </div>
+                <div className="mt-2 text-3xl font-semibold">
+                  {redactedPreview ? "Yes" : "Pending"}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">preview redaction</div>
+              </div>
+              <div className="rounded-[24px] border border-white/65 bg-white/74 p-4 shadow-sm">
+                <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Sparkles className="size-4 text-primary" />
+                  Presets
+                </div>
+                <div className="mt-2 text-3xl font-semibold">
+                  {presetSummary.length || 0}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {presetSummary.length > 0
+                    ? presetSummary.map((preset) => formatLabel(preset)).join(", ")
+                    : "none detected"}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <div className="status-pill">{loading ? "Loading config..." : "Document loaded"}</div>
+            <div className="status-pill">
+              {saving ? "Persisting encrypted storage..." : "Storage synced"}
+            </div>
+            <div className="status-pill">
+              {testing ? "Running connectivity checks..." : `${issueCount} health issues`}
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
 
       <ErrorBanner errors={errors} />
       <NoticeBanner notice={runtimeNotice} />
 
-      <section style={{ display: "flex", gap: 24, alignItems: "stretch" }}>
+      <div className="grid flex-1 gap-6 xl:grid-cols-[minmax(0,1.45fr)_430px]">
         <RawJsonEditor
-          value={rawJson}
+          loading={loading}
           onChange={updateRawJson}
+          onReload={reload}
           onSave={save}
           onTestConnections={testConnections}
-          onReload={reload}
-          loading={loading}
           saving={saving}
           testing={testing}
+          value={rawJson}
         />
-        <aside style={{ width: 360, display: "flex", flexDirection: "column", gap: 20 }}>
-          <ServerSummaryList
-            serverIndex={serverIndex}
-            healthMap={healthMap}
-            toolCatalog={toolCatalog}
-          />
-          <RedactedConfigPreview preview={redactedPreview} />
-        </aside>
-      </section>
+
+        <Card className="rounded-[32px] bg-white/86">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-xl">Operational sidebar</CardTitle>
+                <CardDescription className="mt-1">
+                  Flip between runtime inventory and a safe preview of the effective document.
+                </CardDescription>
+              </div>
+              <Badge variant="outline">read-only views</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <Tabs className="flex flex-col" defaultValue="servers">
+              <TabsList className="w-full justify-start">
+                <TabsTrigger value="servers">Servers</TabsTrigger>
+                <TabsTrigger value="preview">Preview</TabsTrigger>
+              </TabsList>
+              <TabsContent value="servers">
+                <ServerSummaryList
+                  healthMap={healthMap}
+                  serverIndex={serverIndex}
+                  toolCatalog={toolCatalog}
+                />
+              </TabsContent>
+              <TabsContent value="preview">
+                <RedactedConfigPreview preview={redactedPreview} />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
     </main>
   );
 };

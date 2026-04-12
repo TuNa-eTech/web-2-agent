@@ -1,10 +1,16 @@
 import { defineConfig } from "vite";
 import { crx } from "@crxjs/vite-plugin";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import manifest from "./manifest.config";
 
 export default defineConfig(({ command }) => ({
-  plugins: [react(), crx({ manifest })],
+  plugins: [react(), tailwindcss(), crx({ manifest })],
+  resolve: {
+    alias: {
+      "@": new URL("./src", import.meta.url).pathname,
+    },
+  },
   server: {
     host: "127.0.0.1",
     port: 5173,

@@ -1,0 +1,7 @@
+{
+  "name": "com.myworkflowext.native_bridge",
+  "description": "My Workflow Extension Companion",
+  "path": "__HOST_PATH__",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://__EXTENSION_ID__/"]
+}

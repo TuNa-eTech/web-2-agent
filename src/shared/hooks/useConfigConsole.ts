@@ -6,6 +6,7 @@ import {
   loadServerIndex,
   saveRawConfigDocument,
 } from "../../core/storage/configStorage";
+import { loadMcpPreferences, type McpPreferencesMap } from "../../core/storage/mcpPreferences";
 import { redactConfigDocument } from "../lib/configRedaction";
 import { validateRawConfigJson } from "../lib/configValidation";
 import type { ToolCatalog } from "../types";
@@ -29,6 +30,7 @@ type ConsoleState = {
   serverIndex: unknown[];
   healthMap: Record<string, unknown>;
   toolCatalog: ToolCatalog;
+  mcpPreferences: McpPreferencesMap;
   errors: { code: string; message: string; serverId?: string; path?: string }[];
   redactedPreview: string | null;
   runtimeNotice: RuntimeNotice;
@@ -50,6 +52,7 @@ export const useConfigConsole = () => {
     serverIndex: [],
     healthMap: {},
     toolCatalog: {},
+    mcpPreferences: {},
     errors: [],
     redactedPreview: null,
     runtimeNotice: null,
@@ -96,11 +99,12 @@ export const useConfigConsole = () => {
 
   const reload = async () => {
     setState((prev) => ({ ...prev, loading: true, errors: [] }));
-    const [rawJson, serverIndex, healthMap, toolCatalog] = await Promise.all([
+    const [rawJson, serverIndex, healthMap, toolCatalog, mcpPreferences] = await Promise.all([
       loadRawConfigDocument(),
       loadServerIndex(),
       loadConnectionHealthMap(),
       loadToolCatalog(),
+      loadMcpPreferences(),
     ]);
     setState((prev) => ({
       ...prev,
@@ -109,6 +113,7 @@ export const useConfigConsole = () => {
       serverIndex,
       healthMap,
       toolCatalog,
+      mcpPreferences,
       redactedPreview: buildRedactedPreview(rawJson),
     }));
   };
@@ -208,6 +213,71 @@ export const useConfigConsole = () => {
     }
   };
 
+  // -----------------------------------------------------------------------
+  // Toggle actions — optimistic update then sync with background
+  // -----------------------------------------------------------------------
+
+  const handleToggleServer = async (serverId: string, enabled: boolean) => {
+    try {
+      const response = await sendRuntimeMessage<{
+        ok: true;
+        prefs: McpPreferencesMap;
+        catalog: ToolCatalog;
+      }>({
+        type: "options:toggle-server",
+        serverId,
+        enabled,
+      });
+
+      setState((prev) => ({
+        ...prev,
+        mcpPreferences: response.prefs,
+        toolCatalog: response.catalog,
+      }));
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        runtimeNotice: {
+          tone: "error",
+          message: error instanceof Error ? error.message : "Toggle failed.",
+        },
+      }));
+    }
+  };
+
+  const handleToggleTool = async (
+    serverId: string,
+    toolName: string,
+    enabled: boolean,
+  ) => {
+    try {
+      const response = await sendRuntimeMessage<{
+        ok: true;
+        prefs: McpPreferencesMap;
+        catalog: ToolCatalog;
+      }>({
+        type: "options:toggle-tool",
+        serverId,
+        toolName,
+        enabled,
+      });
+
+      setState((prev) => ({
+        ...prev,
+        mcpPreferences: response.prefs,
+        toolCatalog: response.catalog,
+      }));
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        runtimeNotice: {
+          tone: "error",
+          message: error instanceof Error ? error.message : "Toggle failed.",
+        },
+      }));
+    }
+  };
+
   useEffect(() => {
     void reload();
   }, []);
@@ -218,5 +288,7 @@ export const useConfigConsole = () => {
     save,
     testConnections,
     updateRawJson,
+    toggleServer: handleToggleServer,
+    toggleTool: handleToggleTool,
   };
 };

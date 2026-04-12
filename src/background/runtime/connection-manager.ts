@@ -14,6 +14,11 @@ import { ensureHostPermission } from "../../core/permissions/hostPermissions";
 import { normalizeError } from "../../core/utils/normalizeError";
 import { nowIso } from "../../core/utils/time";
 import { loadParsedConfigDocument, persistRuntimeState } from "../../core/storage/configStorage";
+import {
+  buildToolPolicyFromPreferences,
+  loadMcpPreferences,
+  type McpPreferencesMap,
+} from "../../core/storage/mcpPreferences";
 import { createCompanionClient } from "./companion-client";
 import { createToolBroker } from "./tool-broker";
 
@@ -91,6 +96,16 @@ const summarizeResults = (
   };
 };
 
+const createDisabledHealth = (checkedAt: string): ConnectionHealth => ({
+  state: "disabled",
+  lastCheckedAt: checkedAt,
+  serverInfo: null,
+  toolCount: 0,
+  capabilities: [],
+  errorCategory: null,
+  errorMessage: null,
+});
+
 const createServerTester = () => {
   const companionClient = createCompanionClient();
   const toolBroker = createToolBroker();
@@ -98,8 +113,20 @@ const createServerTester = () => {
   const testServer = async (
     serverId: string,
     config: RawMcpServerConfig,
+    prefs: McpPreferencesMap,
   ): Promise<ServerTestResult> => {
     const checkedAt = nowIso();
+
+    // If the user has explicitly disabled this server, skip connecting.
+    const serverPref = prefs[serverId];
+    if (serverPref && !serverPref.enabled) {
+      return {
+        health: createDisabledHealth(checkedAt),
+        tools: [],
+      };
+    }
+
+    const policy = buildToolPolicyFromPreferences(serverId, prefs);
 
     try {
       if (isHttpServerConfig(config)) {
@@ -120,7 +147,7 @@ const createServerTester = () => {
         const listToolsResult = await transport.listTools();
         return {
           health: createSuccessfulHealth(checkedAt, initializeResult, listToolsResult.tools),
-          tools: toolBroker.normalizeDiscoveredTools(serverId, listToolsResult.tools),
+          tools: toolBroker.normalizeDiscoveredTools(serverId, listToolsResult.tools, policy),
         };
       }
 
@@ -135,7 +162,7 @@ const createServerTester = () => {
         const listToolsResult = await transport.listTools();
         return {
           health: createSuccessfulHealth(checkedAt, initializeResult, listToolsResult.tools),
-          tools: toolBroker.normalizeDiscoveredTools(serverId, listToolsResult.tools),
+          tools: toolBroker.normalizeDiscoveredTools(serverId, listToolsResult.tools, policy),
         };
       }
 
@@ -152,12 +179,12 @@ const createServerTester = () => {
   };
 
   return {
-    testDocument: async (document: RawMcpConfigDocument) => {
+    testDocument: async (document: RawMcpConfigDocument, prefs: McpPreferencesMap) => {
       const healthMap: Record<string, ConnectionHealth> = {};
       const toolCatalog: ToolCatalog = {};
 
       for (const [serverId, config] of getServerEntries(document)) {
-        const result = await testServer(serverId, config);
+        const result = await testServer(serverId, config, prefs);
         healthMap[serverId] = result.health;
         toolCatalog[serverId] = result.tools;
       }
@@ -172,8 +199,11 @@ export const createConnectionManager = (): ConnectionManager => {
 
   return {
     testAllConnections: async () => {
-      const document = await loadParsedConfigDocument();
-      const { healthMap, toolCatalog } = await tester.testDocument(document);
+      const [document, prefs] = await Promise.all([
+        loadParsedConfigDocument(),
+        loadMcpPreferences(),
+      ]);
+      const { healthMap, toolCatalog } = await tester.testDocument(document, prefs);
       await persistRuntimeState({
         document,
         healthMap,

@@ -4,4 +4,6 @@ export const STORAGE_KEYS = {
   serverIndex: "mcp.storage.serverIndex",
   connectionHealth: "mcp.storage.connectionHealth",
   toolCatalog: "mcp.storage.toolCatalog",
+  providerSettings: "ai.storage.providerSettings",
+  mcpPreferences: "mcp.storage.preferences",
 };

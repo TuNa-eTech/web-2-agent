@@ -7,6 +7,7 @@ import {
   Server,
   Settings,
   Shield,
+  Sparkles,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { useConfigConsole } from "../../shared/hooks/useConfigConsole";
 import { RawJsonEditor } from "../components/RawJsonEditor";
 import { RedactedConfigPreview } from "../components/RedactedConfigPreview";
 import { ServerSummaryList } from "../components/ServerSummaryList";
+import { ProviderSettingsPanel } from "../components/ProviderSettingsPanel";
 
 const ErrorBanner = ({
   errors,
@@ -95,6 +97,7 @@ export const ConfigConsolePage = () => {
     serverIndex,
     healthMap,
     toolCatalog,
+    mcpPreferences,
     errors,
     redactedPreview,
     runtimeNotice,
@@ -102,9 +105,11 @@ export const ConfigConsolePage = () => {
     save,
     testConnections,
     reload,
+    toggleServer,
+    toggleTool,
   } = useConfigConsole();
 
-  const [activeTab, setActiveTab] = React.useState<"editor" | "servers" | "preview">("editor");
+  const [activeTab, setActiveTab] = React.useState<"editor" | "servers" | "providers" | "preview">("editor");
 
   return (
     <main className="flex min-h-screen bg-muted/20">
@@ -144,10 +149,19 @@ export const ConfigConsolePage = () => {
             )}
           </Button>
 
-          <Button 
-            className="h-10 justify-start font-medium" 
+          <Button
+            className="h-10 justify-start font-medium"
+            onClick={() => setActiveTab("providers")}
+            variant={activeTab === "providers" ? "secondary" : "ghost"}
+          >
+            <Sparkles className="mr-3 size-4" />
+            AI Providers
+          </Button>
+
+          <Button
+            className="h-10 justify-start font-medium"
             onClick={() => setActiveTab("preview")}
-            variant={activeTab === "preview" ? "secondary" : "ghost"} 
+            variant={activeTab === "preview" ? "secondary" : "ghost"}
           >
             <Shield className="mr-3 size-4" />
             Security Preview
@@ -198,10 +212,16 @@ export const ConfigConsolePage = () => {
                   </div>
                   <ServerSummaryList
                     healthMap={healthMap}
+                    mcpPreferences={mcpPreferences}
+                    onToggleServer={toggleServer}
+                    onToggleTool={toggleTool}
                     serverIndex={serverIndex}
                     toolCatalog={toolCatalog}
                   />
                 </div>
+             )}
+             {activeTab === "providers" && (
+                <ProviderSettingsPanel />
              )}
              {activeTab === "preview" && (
                 <div className="flex h-full flex-col gap-4">

@@ -1,6 +1,5 @@
 import { StrictMode, createElement } from "react";
 import { createRoot } from "react-dom/client";
-import { ChatPage } from "./pages/ChatPage";
 import "../styles/globals.css";
 
 document.body.dataset.surface = "sidepanel";
@@ -11,9 +10,13 @@ if (!container) {
   throw new Error("Side panel root element not found.");
 }
 
-createRoot(container).render(
-  createElement(StrictMode, null, createElement(ChatPage)),
-);
+const Placeholder = () =>
+  createElement(
+    "div",
+    { className: "flex h-screen items-center justify-center text-muted-foreground text-sm" },
+    "Side panel — coming soon",
+  );
 
-const port = chrome.runtime.connect({ name: "sidepanel" });
-port.postMessage({ type: "sidepanel:ping" });
+createRoot(container).render(
+  createElement(StrictMode, null, createElement(Placeholder)),
+);

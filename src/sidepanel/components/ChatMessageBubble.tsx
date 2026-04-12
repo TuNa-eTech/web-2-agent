@@ -37,7 +37,7 @@ export const ChatMessageBubble = ({ message }: ChatMessageBubbleProps) => {
     <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[88%] rounded-[24px] border px-4 py-3 shadow-sm",
+          "max-w-[88%] rounded-2xl border px-4 py-3 shadow-sm",
           bubbleTone[message.role],
         )}
       >

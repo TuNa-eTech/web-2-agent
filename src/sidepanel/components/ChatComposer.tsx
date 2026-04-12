@@ -20,7 +20,7 @@ export const ChatComposer = ({ onSend, disabled }: ChatComposerProps) => {
   };
 
   return (
-    <form className="app-surface rounded-[28px] bg-white/84 p-4" onSubmit={handleSubmit}>
+    <form className="app-surface rounded-xl bg-white/84 p-3" onSubmit={handleSubmit}>
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>

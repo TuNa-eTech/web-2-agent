@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 export const Card = ({ className, ...props }: React.ComponentProps<"div">) => (
   <div
     className={cn(
-      "app-surface rounded-[28px] text-card-foreground",
+      "app-surface rounded-xl text-card-foreground",
       className,
     )}
     {...props}
@@ -15,7 +15,7 @@ export const CardHeader = ({
   className,
   ...props
 }: React.ComponentProps<"div">) => (
-  <div className={cn("flex flex-col gap-2 p-6", className)} {...props} />
+  <div className={cn("flex flex-col gap-2 p-4", className)} {...props} />
 );
 
 export const CardTitle = ({

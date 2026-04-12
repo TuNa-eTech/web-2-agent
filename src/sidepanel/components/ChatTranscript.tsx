@@ -10,7 +10,7 @@ type ChatTranscriptProps = {
 
 export const ChatTranscript = ({ messages }: ChatTranscriptProps) => {
   return (
-    <div className="app-surface flex h-full min-h-[420px] flex-col overflow-hidden rounded-[30px] bg-white/86">
+    <div className="app-surface flex h-full min-h-[420px] flex-col overflow-hidden rounded-xl bg-white/86">
       <div className="flex items-center justify-between gap-3 border-b border-border/70 px-5 py-4">
         <div>
           <div className="text-sm font-semibold tracking-[0.01em]">
@@ -25,7 +25,7 @@ export const ChatTranscript = ({ messages }: ChatTranscriptProps) => {
 
       <ScrollArea className="min-h-0 flex-1">
         {messages.length === 0 ? (
-          <div className="flex min-h-[340px] items-center justify-center p-6">
+          <div className="flex min-h-[340px] items-center justify-center p-4">
             <div className="flex max-w-md flex-col items-center gap-4 text-center">
               <div className="rounded-full border border-primary/12 bg-primary/8 p-4 text-primary">
                 <MessageSquareDashed className="size-8" />

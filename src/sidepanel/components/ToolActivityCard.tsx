@@ -9,7 +9,7 @@ type ToolActivityCardProps = {
 };
 
 const JsonBlock = ({ label, value }: { label: string; value: unknown }) => (
-  <div className="code-panel overflow-hidden rounded-[22px]">
+  <div className="code-panel overflow-hidden rounded-xl">
     <div className="border-b border-border/70 px-4 py-3 text-[11px] font-semibold tracking-[0.02em] text-muted-foreground uppercase">
       {label}
     </div>
@@ -23,7 +23,7 @@ const JsonBlock = ({ label, value }: { label: string; value: unknown }) => (
 
 export const ToolActivityCard = ({ activity }: ToolActivityCardProps) => {
   return (
-    <div className="rounded-[24px] border border-border/80 bg-white/84 p-4 shadow-sm">
+    <div className="rounded-xl border border-border/80 bg-white/84 p-3 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-semibold">{activity.toolName}</div>
@@ -54,7 +54,7 @@ export const ToolActivityCard = ({ activity }: ToolActivityCardProps) => {
       </div>
 
       {activity.error ? (
-        <div className="mt-4 rounded-[20px] border border-destructive/20 bg-destructive/7 p-3 text-sm text-destructive">
+        <div className="mt-4 rounded-lg border border-destructive/20 bg-destructive/7 p-3 text-sm text-destructive">
           <span className="font-semibold">{formatLabel(activity.error.source)}: </span>
           {activity.error.message}
         </div>

@@ -38,7 +38,7 @@
 
 :root {
   color-scheme: light;
-  --radius: 1rem;
+  --radius: 0.5rem;
   --background: oklch(0.983 0.008 85.5);
   --foreground: oklch(0.258 0.028 40.2);
   --card: oklch(0.995 0.004 78.2 / 92%);

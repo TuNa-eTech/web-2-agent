@@ -31,7 +31,7 @@ const ErrorBanner = ({
   if (errors.length === 0) return null;
 
   return (
-    <div className="rounded-[26px] border border-destructive/20 bg-destructive/7 p-4">
+    <div className="rounded-xl border border-destructive/20 bg-destructive/7 p-4">
       <div className="flex items-start gap-3">
         <AlertTriangle className="mt-0.5 size-5 text-destructive" />
         <div className="space-y-2">
@@ -82,7 +82,7 @@ const NoticeBanner = ({
           };
 
   return (
-    <div className={`rounded-[26px] border p-4 ${tone.className}`}>
+    <div className={`rounded-xl border p-4 ${tone.className}`}>
       <div className="flex items-start gap-3">
         {tone.icon}
         <div>
@@ -152,8 +152,8 @@ export const ConfigConsolePage = () => {
   );
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-[1540px] flex-col gap-6 px-5 py-6 lg:px-8 lg:py-8">
-      <Card className="feature-glow rounded-[38px] border-white/70">
+    <main className="mx-auto flex min-h-screen w-full max-w-[1540px] flex-col gap-5 px-4 py-5 lg:px-6 lg:py-6">
+      <Card className="feature-glow rounded-xl border-white/70">
         <CardHeader className="gap-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl space-y-4">
@@ -172,7 +172,7 @@ export const ConfigConsolePage = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-[24px] border border-white/65 bg-white/74 p-4 shadow-sm">
+              <div className="rounded-lg border border-white/65 bg-white/74 p-3 shadow-sm">
                 <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <PlugZap className="size-4 text-primary" />
                   Connected
@@ -182,7 +182,7 @@ export const ConfigConsolePage = () => {
                   of {totalServers} servers
                 </div>
               </div>
-              <div className="rounded-[24px] border border-white/65 bg-white/74 p-4 shadow-sm">
+              <div className="rounded-lg border border-white/65 bg-white/74 p-3 shadow-sm">
                 <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <Workflow className="size-4 text-primary" />
                   Tools
@@ -190,7 +190,7 @@ export const ConfigConsolePage = () => {
                 <div className="mt-2 text-3xl font-semibold">{totalTools}</div>
                 <div className="mt-1 text-xs text-muted-foreground">catalogued actions</div>
               </div>
-              <div className="rounded-[24px] border border-white/65 bg-white/74 p-4 shadow-sm">
+              <div className="rounded-lg border border-white/65 bg-white/74 p-3 shadow-sm">
                 <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <Shield className="size-4 text-primary" />
                   Protected
@@ -200,7 +200,7 @@ export const ConfigConsolePage = () => {
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">preview redaction</div>
               </div>
-              <div className="rounded-[24px] border border-white/65 bg-white/74 p-4 shadow-sm">
+              <div className="rounded-lg border border-white/65 bg-white/74 p-3 shadow-sm">
                 <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <Sparkles className="size-4 text-primary" />
                   Presets
@@ -244,7 +244,7 @@ export const ConfigConsolePage = () => {
           value={rawJson}
         />
 
-        <Card className="rounded-[32px] bg-white/86">
+        <Card className="rounded-xl bg-white/86">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between gap-3">
               <div>

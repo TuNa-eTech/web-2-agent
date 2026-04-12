@@ -22,7 +22,7 @@ export const ConfirmationGateCard = ({
   onDecision,
 }: ConfirmationGateCardProps) => {
   return (
-    <Card className="rounded-[30px] border-warning/25 bg-warning/10">
+    <Card className="rounded-xl border-warning/25 bg-warning/10">
       <CardHeader className="pb-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
@@ -44,19 +44,19 @@ export const ConfirmationGateCard = ({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-[22px] border border-white/70 bg-white/70 p-4">
+          <div className="rounded-lg border border-white/70 bg-white/70 p-3">
             <div className="text-xs font-semibold tracking-[0.02em] text-muted-foreground uppercase">
               Tool
             </div>
             <div className="mt-2 text-sm font-semibold">{request.toolName}</div>
           </div>
-          <div className="rounded-[22px] border border-white/70 bg-white/70 p-4">
+          <div className="rounded-lg border border-white/70 bg-white/70 p-3">
             <div className="text-xs font-semibold tracking-[0.02em] text-muted-foreground uppercase">
               Server
             </div>
             <div className="mt-2 text-sm font-semibold">{request.serverId}</div>
           </div>
-          <div className="rounded-[22px] border border-white/70 bg-white/70 p-4">
+          <div className="rounded-lg border border-white/70 bg-white/70 p-3">
             <div className="text-xs font-semibold tracking-[0.02em] text-muted-foreground uppercase">
               Requested
             </div>
@@ -66,16 +66,16 @@ export const ConfirmationGateCard = ({
           </div>
         </div>
 
-        <div className="rounded-[22px] border border-border/70 bg-white/70 p-4 text-sm leading-6">
+        <div className="rounded-lg border border-border/70 bg-white/70 p-3 text-sm leading-6">
           {request.reason}
         </div>
 
-        <div className="code-panel overflow-hidden rounded-[24px]">
+        <div className="code-panel overflow-hidden rounded-xl">
           <div className="border-b border-border/70 px-5 py-3 text-xs font-semibold tracking-[0.02em] text-muted-foreground uppercase">
             Payload
           </div>
           <ScrollArea className="h-40">
-            <pre className="m-0 p-5 text-xs leading-6 whitespace-pre-wrap break-words">
+            <pre className="m-0 p-3 text-xs leading-6 whitespace-pre-wrap break-words">
               {JSON.stringify(request.input, null, 2)}
             </pre>
           </ScrollArea>

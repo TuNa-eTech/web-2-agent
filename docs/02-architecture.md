@@ -395,4 +395,5 @@ my-workflow-ext/
 └── docs/
 ```
 
-For the detailed folder contract and dependency rules, see `docs/09-project-structure.md`.
+For MCP client implementation details, see `docs/09-mcp-client-strategy.md`.
+For user onboarding flows, see `docs/10-onboarding-ux.md`.

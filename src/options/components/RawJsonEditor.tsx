@@ -31,7 +31,7 @@ export const RawJsonEditor = ({
 
   return (
     <section className="flex h-full flex-col gap-4">
-      <div className="feature-glow rounded-[28px] border border-white/70 p-5 shadow-sm">
+      <div className="feature-glow rounded-xl border border-white/70 p-4 shadow-sm">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="space-y-2">
             <div className="text-sm font-semibold tracking-[0.01em] text-primary">
@@ -93,7 +93,7 @@ export const RawJsonEditor = ({
         </div>
       </div>
 
-      <div className="app-surface rounded-[30px] bg-white/88 p-3">
+      <div className="app-surface rounded-xl bg-white/88 p-2">
         <Textarea
           className="min-h-[560px] resize-y border-0 bg-white/70 px-5 py-5 font-mono text-[13px] leading-6 shadow-none focus-visible:ring-0"
           disabled={loading}

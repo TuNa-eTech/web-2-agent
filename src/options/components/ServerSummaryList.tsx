@@ -34,7 +34,7 @@ export const ServerSummaryList = ({
       <ScrollArea className="h-[540px] pr-3">
         <div className="grid gap-3">
           {serverIndex.length === 0 ? (
-            <div className="rounded-[24px] border border-dashed border-border/90 bg-muted/55 p-5 text-sm text-muted-foreground">
+            <div className="rounded-xl border border-dashed border-border/90 bg-muted/55 p-4 text-sm text-muted-foreground">
               No servers indexed yet.
             </div>
           ) : (
@@ -69,7 +69,7 @@ export const ServerSummaryList = ({
 
               return (
                 <div
-                  className="rounded-[24px] border border-border/80 bg-white/84 p-4 shadow-sm"
+                  className="rounded-xl border border-border/80 bg-white/84 p-4 shadow-sm"
                   key={id}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -110,7 +110,7 @@ export const ServerSummaryList = ({
                   ) : null}
 
                   {errorCategory || errorMessage ? (
-                    <div className="mt-4 rounded-[20px] border border-destructive/20 bg-destructive/7 p-3 text-sm text-destructive">
+                    <div className="mt-4 rounded-lg border border-destructive/20 bg-destructive/7 p-3 text-sm text-destructive">
                       <span className="font-semibold">
                         {errorCategory ? `${formatLabel(errorCategory)}: ` : ""}
                       </span>

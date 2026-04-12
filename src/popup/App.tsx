@@ -35,21 +35,21 @@ const EMPTY_STATE: PopupState = {
 
 const PopupSkeleton = () => (
   <div className="grid gap-3">
-    <Card className="feature-glow rounded-[30px] border-white/70">
+    <Card className="feature-glow rounded-xl border-white/70">
       <CardHeader className="space-y-4">
         <Skeleton className="h-6 w-28 rounded-full" />
         <Skeleton className="h-8 w-44" />
         <Skeleton className="h-4 w-full" />
         <div className="grid grid-cols-2 gap-3">
-          <Skeleton className="h-20 rounded-[24px]" />
-          <Skeleton className="h-20 rounded-[24px]" />
+          <Skeleton className="h-16 rounded-lg" />
+          <Skeleton className="h-16 rounded-lg" />
         </div>
       </CardHeader>
     </Card>
-    <Card className="rounded-[26px]">
+    <Card className="rounded-xl">
       <CardContent className="space-y-3 pt-6">
-        <Skeleton className="h-28 rounded-[24px]" />
-        <Skeleton className="h-28 rounded-[24px]" />
+        <Skeleton className="h-20 rounded-lg" />
+        <Skeleton className="h-20 rounded-lg" />
       </CardContent>
     </Card>
   </div>
@@ -68,7 +68,7 @@ const PopupServerCard = ({
     .map((entry) => entry.action);
 
   return (
-    <Card className="rounded-[26px] bg-white/86">
+    <Card className="rounded-xl bg-white/86">
       <CardHeader className="gap-4 pb-4">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1.5">
@@ -113,7 +113,7 @@ const PopupServerCard = ({
         </div>
 
         {server.errorCategory || server.errorMessage ? (
-          <div className="rounded-[22px] border border-destructive/20 bg-destructive/7 p-4 text-sm text-destructive">
+          <div className="rounded-xl border border-destructive/20 bg-destructive/7 p-4 text-sm text-destructive">
             <div className="font-semibold">
               {server.errorCategory ? formatLabel(server.errorCategory) : "Connection error"}
             </div>
@@ -127,7 +127,7 @@ const PopupServerCard = ({
           {quickActions.length > 0 ? (
             quickActions.map((action, index) => (
               <Button
-                className="h-auto justify-between rounded-[22px] px-4 py-3 text-left"
+                className="h-auto justify-between rounded-lg px-4 py-3 text-left"
                 key={action.id}
                 onClick={() => onRunAction(server.serverId, action.id)}
                 variant={index === 0 ? "default" : "outline"}
@@ -144,7 +144,7 @@ const PopupServerCard = ({
               </Button>
             ))
           ) : (
-            <div className="rounded-[22px] border border-dashed border-border/90 bg-muted/55 px-4 py-5 text-sm text-muted-foreground">
+            <div className="rounded-xl border border-dashed border-border/90 bg-muted/55 px-4 py-4 text-sm text-muted-foreground">
               Quick actions will appear here after the server exposes compatible tools.
             </div>
           )}
@@ -207,16 +207,16 @@ export const App = () => {
   return (
     <div className="min-h-[520px] p-3">
       <div className="mx-auto flex h-full max-h-[520px] flex-col gap-3">
-        <Card className="feature-glow rounded-[32px] border-white/70">
-          <CardHeader className="gap-5">
+        <Card className="feature-glow rounded-xl border-white/70">
+          <CardHeader className="gap-4">
             <div className="flex items-start justify-between gap-4">
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Badge className="bg-white/72 text-primary shadow-sm" variant="secondary">
                   Atlassian preset
                 </Badge>
                 <div>
-                  <CardTitle className="text-[22px]">Command Deck</CardTitle>
-                  <CardDescription className="mt-2 max-w-[280px] text-sm">
+                  <CardTitle className="text-lg">Command Deck</CardTitle>
+                  <CardDescription className="mt-1 max-w-[280px] text-xs">
                     Keep the popup lean, surface the next best action, and send deeper work to the
                     AI workspace.
                   </CardDescription>
@@ -228,23 +228,23 @@ export const App = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-[24px] border border-white/65 bg-white/74 p-4 shadow-sm">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <Sparkles className="size-4 text-primary" />
+              <div className="rounded-lg border border-white/65 bg-white/74 p-3 shadow-sm">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                  <Sparkles className="size-3 text-primary" />
                   Ready servers
                 </div>
-                <div className="mt-2 text-3xl font-semibold">{connectedCount}</div>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <div className="mt-1 text-2xl font-semibold">{connectedCount}</div>
+                <p className="mt-1 text-[10px] text-muted-foreground">
                   {atlassianServers.length} configured · updated {formatTimestamp(state.now)}
                 </p>
               </div>
-              <div className="rounded-[24px] border border-white/65 bg-white/74 p-4 shadow-sm">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <WandSparkles className="size-4 text-primary" />
+              <div className="rounded-lg border border-white/65 bg-white/74 p-3 shadow-sm">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                  <WandSparkles className="size-3 text-primary" />
                   Available tools
                 </div>
-                <div className="mt-2 text-3xl font-semibold">{toolCount}</div>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <div className="mt-1 text-2xl font-semibold">{toolCount}</div>
+                <p className="mt-1 text-[10px] text-muted-foreground">
                   Prioritized quick actions for Atlassian workflows.
                 </p>
               </div>
@@ -252,7 +252,7 @@ export const App = () => {
           </CardHeader>
         </Card>
 
-        <Card className="rounded-[30px] bg-white/84">
+        <Card className="rounded-xl bg-white/84">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -268,7 +268,7 @@ export const App = () => {
             {loading ? (
               <PopupSkeleton />
             ) : atlassianServers.length === 0 ? (
-              <div className="rounded-[24px] border border-dashed border-border/90 bg-muted/55 p-5 text-sm text-muted-foreground">
+              <div className="rounded-lg border border-dashed border-border/90 bg-muted/55 p-4 text-sm text-muted-foreground">
                 Atlassian preset is not configured yet. Add a server in Config Console to unlock
                 quick actions.
               </div>
@@ -285,14 +285,14 @@ export const App = () => {
             <Separator />
 
             <div className="grid grid-cols-[1fr_auto] gap-2">
-              <Button className="justify-between rounded-[22px]" onClick={openSidepanel}>
+              <Button className="justify-between rounded-lg" onClick={openSidepanel}>
                 <span className="inline-flex items-center gap-2">
                   <PanelsTopLeft className="size-4" />
                   Open AI Workspace
                 </span>
                 <ArrowUpRight className="size-4" />
               </Button>
-              <Button className="rounded-[22px]" onClick={openOptions} variant="outline">
+              <Button className="rounded-lg" onClick={openOptions} variant="outline">
                 Configure
               </Button>
             </div>

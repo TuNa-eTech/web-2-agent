@@ -33,7 +33,7 @@ type ChatShellProps = {
 };
 
 const ErrorNotice = ({ error }: { error: AiSurfaceError }) => (
-  <div className="rounded-[22px] border border-destructive/20 bg-destructive/7 p-4">
+  <div className="rounded-xl border border-destructive/20 bg-destructive/7 p-4">
     <div className="flex items-start gap-3">
       <AlertTriangle className="mt-0.5 size-5 text-destructive" />
       <div>
@@ -47,7 +47,7 @@ const ErrorNotice = ({ error }: { error: AiSurfaceError }) => (
 );
 
 const ToolActivityList = ({ items }: { items: ToolActivity[] }) => (
-  <div className="app-surface flex h-full min-h-[420px] flex-col overflow-hidden rounded-[30px] bg-white/86">
+  <div className="app-surface flex h-full min-h-[420px] flex-col overflow-hidden rounded-xl bg-white/86">
     <div className="flex items-center justify-between gap-3 border-b border-border/70 px-5 py-4">
       <div>
         <div className="text-sm font-semibold tracking-[0.01em]">Tool Activity</div>
@@ -60,7 +60,7 @@ const ToolActivityList = ({ items }: { items: ToolActivity[] }) => (
     <ScrollArea className="min-h-0 flex-1 pr-3">
       <div className="grid gap-3 p-4">
         {items.length === 0 ? (
-          <div className="rounded-[22px] border border-dashed border-border/90 bg-muted/55 p-5 text-sm text-muted-foreground">
+          <div className="rounded-xl border border-dashed border-border/90 bg-muted/55 p-4 text-sm text-muted-foreground">
             No tool activity yet.
           </div>
         ) : (
@@ -89,19 +89,19 @@ export const ChatShell = ({
         : "outline";
 
   return (
-    <div className="min-h-screen p-4 md:p-5">
-      <Card className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-[1320px] flex-col rounded-[36px] bg-white/86 md:min-h-[calc(100vh-2.5rem)]">
-        <CardHeader className="feature-glow gap-6 border-b border-white/70 pb-6">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div className="max-w-3xl space-y-4">
+    <div className="min-h-screen p-3 md:p-4">
+      <Card className="mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1320px] flex-col rounded-xl bg-white/86 md:min-h-[calc(100vh-2rem)]">
+        <CardHeader className="feature-glow gap-4 border-b border-white/70 pb-5">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-3xl space-y-2">
               <Badge className="bg-white/72 text-primary" variant="secondary">
                 AI workspace
               </Badge>
               <div>
-                <CardTitle className="text-3xl sm:text-4xl">
+                <CardTitle className="text-xl sm:text-2xl">
                   Assist, inspect, approve
                 </CardTitle>
-                <CardDescription className="mt-3 max-w-2xl text-base leading-7">
+                <CardDescription className="mt-1 max-w-2xl text-sm leading-6">
                   Keep the conversation readable, separate tool execution from chat intent, and
                   require an explicit decision whenever the workflow reaches a risky action.
                 </CardDescription>
@@ -117,39 +117,39 @@ export const ChatShell = ({
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-[24px] border border-white/65 bg-white/72 p-4 shadow-sm">
-              <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Bot className="size-4 text-primary" />
+          <div className="flex flex-wrap gap-3">
+            <div className="flex-1 rounded-lg border border-white/65 bg-white/72 p-3 shadow-sm min-w-[200px]">
+              <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <Bot className="size-3 text-primary" />
                 Messages
               </div>
-              <div className="mt-2 text-3xl font-semibold">{state.messages.length}</div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                visible in the current session
+              <div className="mt-1 flex items-baseline gap-2">
+                <div className="text-xl font-semibold">{state.messages.length}</div>
+                <div className="text-xs text-muted-foreground">in session</div>
               </div>
             </div>
-            <div className="rounded-[24px] border border-white/65 bg-white/72 p-4 shadow-sm">
-              <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Wrench className="size-4 text-primary" />
+            <div className="flex-1 rounded-lg border border-white/65 bg-white/72 p-3 shadow-sm min-w-[200px]">
+              <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <Wrench className="size-3 text-primary" />
                 Active tools
               </div>
-              <div className="mt-2 text-3xl font-semibold">{activeToolCount}</div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                queued, running, or awaiting approval
+              <div className="mt-1 flex items-baseline gap-2">
+                <div className="text-xl font-semibold">{activeToolCount}</div>
+                <div className="text-xs text-muted-foreground">queued/running</div>
               </div>
             </div>
-            <div className="rounded-[24px] border border-white/65 bg-white/72 p-4 shadow-sm">
-              <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Sparkles className="size-4 text-primary" />
+            <div className="flex-1 rounded-lg border border-white/65 bg-white/72 p-3 shadow-sm min-w-[200px]">
+              <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <Sparkles className="size-3 text-primary" />
                 Approval gate
               </div>
-              <div className="mt-2 text-3xl font-semibold">
-                {state.pendingConfirmation ? "Open" : "Clear"}
-              </div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                {state.pendingConfirmation
-                  ? "waiting for a decision"
-                  : "no pending confirmations"}
+              <div className="mt-1 flex items-baseline gap-2">
+                <div className="text-xl font-semibold">
+                  {state.pendingConfirmation ? "Open" : "Clear"}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {state.pendingConfirmation ? "waiting" : "none pending"}
+                </div>
               </div>
             </div>
           </div>

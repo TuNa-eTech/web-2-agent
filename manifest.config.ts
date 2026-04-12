@@ -18,7 +18,7 @@ export default defineManifest({
     service_worker: "src/background/index.ts",
     type: "module"
   },
-  permissions: ["storage", "sidePanel", "nativeMessaging"],
+  permissions: ["storage", "unlimitedStorage", "sidePanel", "nativeMessaging"],
   optional_host_permissions: ["*://*/*"],
   icons: {
     "16": "public/icons/icon16.png",

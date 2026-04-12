@@ -11,6 +11,7 @@ import {
 } from "../core/ai";
 import { loadToolCatalog, loadParsedConfigDocument } from "../core/storage/configStorage";
 import { loadMcpPreferences } from "../core/storage/mcpPreferences";
+import { assembleSystemPrompt } from "../core/skills";
 import { createHttpTransport } from "../core/mcp/httpTransport";
 import { createCompanionClient } from "./runtime/companion-client";
 import { createCompanionTransport } from "../core/mcp/companionTransport";
@@ -181,8 +182,11 @@ export const registerPortRouter = () => {
           }
 
           try {
-            // Re-fetch tools fresh each turn (picks up MCP catalog changes)
-            const availableTools = await broker.listTools();
+            // Re-fetch tools and assemble system prompt fresh each turn
+            const [availableTools, systemPrompt] = await Promise.all([
+              broker.listTools(),
+              assembleSystemPrompt(),
+            ]);
 
             const input: StartTurnInput = {
               turnId: payload.turnId,
@@ -196,6 +200,7 @@ export const registerPortRouter = () => {
                 createdAt: new Date(Date.now() - (payload.history.length - i) * 1000).toISOString(),
               })),
               tools: availableTools,
+              systemPrompt,
             };
 
             for await (const event of orchestrator.startTurn(input)) {

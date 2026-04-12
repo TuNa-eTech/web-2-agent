@@ -71,12 +71,13 @@ export class DefaultChatOrchestrator implements ChatOrchestrator {
     baseUrl: string | undefined,
     messages: ChatMessage[],
     tools: StartTurnInput["tools"],
+    systemPrompt?: string,
   ): AsyncGenerator<
     ChatOrchestratorEvent | { type: "__tool-result__"; calls: Array<{ call: NormalizedToolCall; result: NormalizedToolResult }> },
     void
   > {
     const openai = new OpenAI({ apiKey, baseURL: baseUrl, dangerouslyAllowBrowser: true });
-    const context = OpenAiAdapter.buildRequest({ providerId: "openai", model, messages, tools: tools ?? [] });
+    const context = OpenAiAdapter.buildRequest({ providerId: "openai", model, messages, tools: tools ?? [], systemPrompt });
 
     // OpenAiRequest matches the payload structure precisely
     const stream = await openai.chat.completions.create({
@@ -163,13 +164,17 @@ export class DefaultChatOrchestrator implements ChatOrchestrator {
     apiKey: string,
     messages: ChatMessage[],
     tools: StartTurnInput["tools"],
+    systemPrompt?: string,
   ): AsyncGenerator<
     ChatOrchestratorEvent | { type: "__tool-result__"; calls: Array<{ call: NormalizedToolCall; result: NormalizedToolResult }> },
     void
   > {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const generativeModel = genAI.getGenerativeModel({ model });
-    const context = GeminiAdapter.buildRequest({ providerId: "gemini", model, messages, tools: tools ?? [] });
+    const generativeModel = genAI.getGenerativeModel({
+      model,
+      ...(systemPrompt ? { systemInstruction: { role: "system", parts: [{ text: systemPrompt }] } } : {}),
+    });
+    const context = GeminiAdapter.buildRequest({ providerId: "gemini", model, messages, tools: tools ?? [], systemPrompt });
 
     const streamResult = await generativeModel.generateContentStream({
       contents: context.contents as any,
@@ -228,7 +233,7 @@ export class DefaultChatOrchestrator implements ChatOrchestrator {
   }
 
   async *startTurn(input: StartTurnInput): AsyncIterable<ChatOrchestratorEvent> {
-    const { turnId, providerId, model, userMessage, history, tools } = input;
+    const { turnId, providerId, model, userMessage, history, tools, systemPrompt } = input;
     this.cancelledTurns.delete(turnId);
 
     try {
@@ -258,8 +263,8 @@ export class DefaultChatOrchestrator implements ChatOrchestrator {
         assistantText = "";
 
         const streamGen = providerId === "gemini"
-          ? this.streamOnceGemini(turnId, model, config.apiKey, messages, tools)
-          : this.streamOnceOpenAi(turnId, model, config.apiKey, config.baseUrl, messages, tools);
+          ? this.streamOnceGemini(turnId, model, config.apiKey, messages, tools, systemPrompt)
+          : this.streamOnceOpenAi(turnId, model, config.apiKey, config.baseUrl, messages, tools, systemPrompt);
 
         for await (const ev of streamGen) {
           if ((ev as any).type === "__tool-result__") {

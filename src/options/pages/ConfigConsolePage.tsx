@@ -1,6 +1,7 @@
 import * as React from "react";
 import {
   AlertTriangle,
+  BookOpen,
   CheckCircle2,
   FileJson,
   Info,
@@ -16,6 +17,7 @@ import { RawJsonEditor } from "../components/RawJsonEditor";
 import { RedactedConfigPreview } from "../components/RedactedConfigPreview";
 import { ServerSummaryList } from "../components/ServerSummaryList";
 import { ProviderSettingsPanel } from "../components/ProviderSettingsPanel";
+import { SkillsPanel } from "../components/SkillsPanel";
 
 const ErrorBanner = ({
   errors,
@@ -109,7 +111,7 @@ export const ConfigConsolePage = () => {
     toggleTool,
   } = useConfigConsole();
 
-  const [activeTab, setActiveTab] = React.useState<"editor" | "servers" | "providers" | "preview">("editor");
+  const [activeTab, setActiveTab] = React.useState<"editor" | "servers" | "providers" | "skills" | "preview">("editor");
 
   return (
     <main className="flex h-screen w-full overflow-hidden bg-muted/20">
@@ -156,6 +158,15 @@ export const ConfigConsolePage = () => {
           >
             <Sparkles className="mr-3 size-4" />
             AI Providers
+          </Button>
+
+          <Button
+            className="h-10 justify-start font-medium"
+            onClick={() => setActiveTab("skills")}
+            variant={activeTab === "skills" ? "secondary" : "ghost"}
+          >
+            <BookOpen className="mr-3 size-4" />
+            Skills
           </Button>
 
           <Button
@@ -243,6 +254,9 @@ export const ConfigConsolePage = () => {
              )}
              {activeTab === "providers" && (
                 <ProviderSettingsPanel />
+             )}
+             {activeTab === "skills" && (
+                <SkillsPanel />
              )}
              {activeTab === "preview" && (
                 <div className="flex h-full flex-col gap-4">

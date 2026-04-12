@@ -32,6 +32,7 @@ export type GeminiRequest = {
   model: string;
   contents: GeminiContent[];
   tools?: GeminiToolDefinition[];
+  systemPrompt?: string;
   generationConfig?: {
     temperature?: number;
   };
@@ -188,6 +189,7 @@ export const GeminiAdapter: ProviderAdapter<
       model: context.model,
       contents,
       tools: tools.length ? tools : undefined,
+      systemPrompt: context.systemPrompt,
       generationConfig: {
         temperature: context.temperature,
       },

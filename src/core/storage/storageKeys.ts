@@ -8,4 +8,6 @@ export const STORAGE_KEYS = {
   mcpPreferences: "mcp.storage.preferences",
   conversationIndex: "ai.conversations.index",
   conversationMessages: (id: string) => `ai.conversations.${id}.messages`,
+  skillIndex: "skills.index",
+  skillContent: (id: string) => `skills.content.${id}`,
 };

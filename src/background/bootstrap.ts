@@ -11,4 +11,8 @@ export const startBackground = () => {
   chrome.runtime.onInstalled.addListener(() => {
     // TODO: seed storage or telemetry bootstraps.
   });
+
+  if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
+    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error);
+  }
 };

@@ -9,9 +9,7 @@ export default defineManifest({
   version: "0.0.0",
   key: EXTENSION_PUBLIC_KEY,
   description: "MCP-first Chrome extension shell.",
-  action: {
-    default_popup: "src/popup/index.html"
-  },
+  action: {},
   side_panel: {
     default_path: "src/sidepanel/index.html"
   },

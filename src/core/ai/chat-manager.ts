@@ -16,6 +16,8 @@ import { GeminiAdapter } from "./providers/gemini-adapter";
 import { OpenAiAdapter } from "./providers/openai-adapter";
 import type { ProviderAdapter } from "./provider-types";
 import { loadProviderSettings } from "../storage/providerStorage";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 
 const MAX_AGENTIC_ITERATIONS = 6; // Safety limit to prevent infinite loops
 
@@ -61,96 +63,165 @@ export class DefaultChatOrchestrator implements ChatOrchestrator {
     return { event: { type: "confirmation-required", turnId, request }, decision };
   }
 
-  /** Single streaming call to the LLM. Returns tool calls collected in this call. */
-  private async *streamOnce(
+  /** Single streaming call to OpenAI via openai SDK */
+  private async *streamOnceOpenAi(
     turnId: string,
-    providerId: ProviderId,
     model: string,
-    endpoint: string,
-    headers: Record<string, string>,
-    adapter: ProviderAdapter<any, any>,
+    apiKey: string,
+    baseUrl: string | undefined,
     messages: ChatMessage[],
     tools: StartTurnInput["tools"],
   ): AsyncGenerator<
     ChatOrchestratorEvent | { type: "__tool-result__"; calls: Array<{ call: NormalizedToolCall; result: NormalizedToolResult }> },
     void
   > {
-    const requestPayload = adapter.buildRequest({ providerId, model, messages, tools });
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(requestPayload),
+    const openai = new OpenAI({ apiKey, baseURL: baseUrl, dangerouslyAllowBrowser: true });
+    const context = OpenAiAdapter.buildRequest({ providerId: "openai", model, messages, tools: tools ?? [] });
+
+    // OpenAiRequest matches the payload structure precisely
+    const stream = await openai.chat.completions.create({
+      model: context.model,
+      messages: context.messages as any,
+      tools: context.tools as any,
+      tool_choice: context.tool_choice as any,
+      stream: true,
+      temperature: context.temperature,
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      yield { type: "error", turnId, error: { source: "provider", message: `HTTP ${response.status}: ${errText}` } };
-      return;
-    }
-    if (!response.body) throw new Error("No response body");
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    // Accumulate tool calls for this pass so we can build the history for the next turn
     const collectedCalls: Array<{ call: NormalizedToolCall; result: NormalizedToolResult }> = [];
+    const acc = new Map<number, { id: string; name: string; args: string }>();
 
-    while (true) {
+    for await (const chunk of stream) {
       if (this.cancelledTurns.has(turnId)) {
         yield { type: "done", turnId, reason: "cancelled" };
         return;
       }
 
-      const { done, value } = await reader.read();
-      if (done) break;
+      if (!chunk.choices || chunk.choices.length === 0) continue;
+      const choice = chunk.choices[0];
+      const delta = choice.delta;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
+      if (delta?.content) {
+        yield { type: "assistant-token", turnId, messageId: "msg", delta: delta.content };
+      }
 
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-
-        let chunkObj: any = null;
-        if (trimmed === "data: [DONE]") continue;
-        if (trimmed.startsWith("data: ")) {
-          try { chunkObj = JSON.parse(trimmed.slice(6)); } catch { /* ignore */ }
-        }
-        if (!chunkObj) continue;
-
-        const events = adapter.parseStreamEvent(chunkObj);
-        for (const ev of events) {
-          if (ev.type === "token") {
-            yield { type: "assistant-token", turnId, messageId: "msg", delta: ev.delta };
-          } else if (ev.type === "tool-call") {
-            // Pause for user confirmation
-            const { event: confirmEvent, decision } = this.waitForConfirmation(turnId, ev.call);
-            yield confirmEvent;
-            const d = await decision;
-
-            if (d === "denied") {
-              const result: NormalizedToolResult = { id: ev.call.id, name: ev.call.name, output: "Cancelled by user.", isError: true };
-              collectedCalls.push({ call: ev.call, result });
-              yield { type: "tool-result", turnId, result };
-            } else {
-              yield { type: "tool-call", turnId, call: ev.call };
-              const result = await this.deps.broker.executeTool(ev.call);
-              collectedCalls.push({ call: ev.call, result });
-              yield { type: "tool-result", turnId, result };
-            }
-          } else if (ev.type === "error") {
-            yield { type: "error", turnId, error: ev.error };
-          } else if (ev.type === "done" && ev.reason !== "tool_calls") {
-            // Only forward "real" done (stop/length), not tool_calls done
-            yield { type: "done", turnId, reason: ev.reason };
+      if (delta?.tool_calls) {
+        for (const fragment of delta.tool_calls) {
+          const idx = fragment.index;
+          let existing = acc.get(idx);
+          if (!existing) {
+            existing = { id: fragment.id ?? `tool-${idx}`, name: fragment.function?.name ?? "unknown_tool", args: "" };
+            acc.set(idx, existing);
           }
-          // ev.type === "done" && reason === "tool_calls" → suppressed, agentic loop handles it
+          if (fragment.function?.arguments) {
+            existing.args += fragment.function.arguments;
+          }
         }
+      }
+
+      if ((choice.finish_reason as string) === "tool_calls") {
+        for (const entry of Array.from(acc.values())) {
+          let parsedArgs: unknown = entry.args;
+          try { parsedArgs = JSON.parse(entry.args); } catch {}
+          
+          const call: NormalizedToolCall = {
+            id: entry.id,
+            name: entry.name,
+            arguments: parsedArgs as Record<string, unknown>,
+          };
+
+          const { event: confirmEvent, decision } = this.waitForConfirmation(turnId, call);
+          yield confirmEvent;
+          const d = await decision;
+
+          if (d === "denied") {
+            const result: NormalizedToolResult = { id: call.id, name: call.name, output: "Cancelled by user.", isError: true };
+            collectedCalls.push({ call, result });
+            yield { type: "tool-result", turnId, result };
+          } else {
+            yield { type: "tool-call", turnId, call };
+            const result = await this.deps.broker.executeTool(call);
+            collectedCalls.push({ call, result });
+            yield { type: "tool-result", turnId, result };
+          }
+        }
+        acc.clear();
+      } else if (choice.finish_reason && (choice.finish_reason as string) !== "tool_calls") {
+        yield { type: "done", turnId, reason: choice.finish_reason };
       }
     }
 
-    // Signal collected tool calls back to the agentic loop
+    if (collectedCalls.length > 0) {
+      yield { type: "__tool-result__", calls: collectedCalls } as any;
+    }
+  }
+
+  /** Single streaming call to Gemini via @google/generative-ai SDK */
+  private async *streamOnceGemini(
+    turnId: string,
+    model: string,
+    apiKey: string,
+    messages: ChatMessage[],
+    tools: StartTurnInput["tools"],
+  ): AsyncGenerator<
+    ChatOrchestratorEvent | { type: "__tool-result__"; calls: Array<{ call: NormalizedToolCall; result: NormalizedToolResult }> },
+    void
+  > {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const generativeModel = genAI.getGenerativeModel({ model });
+    const context = GeminiAdapter.buildRequest({ providerId: "gemini", model, messages, tools: tools ?? [] });
+
+    const streamResult = await generativeModel.generateContentStream({
+      contents: context.contents as any,
+      tools: context.tools as any,
+    });
+
+    const collectedCalls: Array<{ call: NormalizedToolCall; result: NormalizedToolResult }> = [];
+
+    for await (const chunk of streamResult.stream) {
+      if (this.cancelledTurns.has(turnId)) {
+        yield { type: "done", turnId, reason: "cancelled" };
+        return;
+      }
+
+      let text = "";
+      try {
+        text = chunk.text() || "";
+      } catch (e) {
+        // SDK throws if there's no text part (e.g. only function calls)
+      }
+
+      if (text) {
+        yield { type: "assistant-token", turnId, messageId: "msg", delta: text };
+      }
+
+      const functionCalls = chunk.functionCalls() ?? [];
+      for (const fc of functionCalls) {
+        const call: NormalizedToolCall = {
+          id: `gemini-${fc.name}`,
+          name: fc.name,
+          arguments: fc.args as Record<string, unknown>,
+        };
+
+        const { event: confirmEvent, decision } = this.waitForConfirmation(turnId, call);
+        yield confirmEvent;
+        const d = await decision;
+
+        if (d === "denied") {
+          const result: NormalizedToolResult = { id: call.id, name: call.name, output: "Cancelled by user.", isError: true };
+          collectedCalls.push({ call, result });
+          yield { type: "tool-result", turnId, result };
+        } else {
+          yield { type: "tool-call", turnId, call };
+          const result = await this.deps.broker.executeTool(call);
+          collectedCalls.push({ call, result });
+          yield { type: "tool-result", turnId, result };
+        }
+      }
+      
+      // forward done from SDK if applicable, although SDK handles it gracefully.
+    }
+
     if (collectedCalls.length > 0) {
       yield { type: "__tool-result__", calls: collectedCalls } as any;
     }
@@ -167,19 +238,8 @@ export class DefaultChatOrchestrator implements ChatOrchestrator {
         throw new Error(`Provider ${providerId} is not configured or disabled.`);
       }
 
-      let adapter: ProviderAdapter<any, any>;
-      if (providerId === "gemini") adapter = GeminiAdapter;
-      else if (providerId === "openai") adapter = OpenAiAdapter;
-      else throw new Error(`Unknown provider: ${providerId}`);
-
-      let endpoint = "";
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (providerId === "gemini") {
-        endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${config.apiKey}`;
-      } else if (providerId === "openai") {
-        const base = (config.baseUrl ?? "https://api.openai.com/v1").replace(/\/+$/, "");
-        endpoint = `${base}/chat/completions`;
-        headers["Authorization"] = `Bearer ${config.apiKey}`;
+      if (providerId !== "gemini" && providerId !== "openai") {
+        throw new Error(`Unknown provider: ${providerId}`);
       }
 
       // Start with history provided by UI (does NOT include the current user message),
@@ -197,7 +257,11 @@ export class DefaultChatOrchestrator implements ChatOrchestrator {
         let toolCallsThisPass: Array<{ call: NormalizedToolCall; result: NormalizedToolResult }> = [];
         assistantText = "";
 
-        for await (const ev of this.streamOnce(turnId, providerId, model, endpoint, headers, adapter, messages, tools)) {
+        const streamGen = providerId === "gemini"
+          ? this.streamOnceGemini(turnId, model, config.apiKey, messages, tools)
+          : this.streamOnceOpenAi(turnId, model, config.apiKey, config.baseUrl, messages, tools);
+
+        for await (const ev of streamGen) {
           if ((ev as any).type === "__tool-result__") {
             toolCallsThisPass = (ev as any).calls;
           } else {

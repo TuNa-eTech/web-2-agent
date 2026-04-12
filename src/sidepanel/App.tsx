@@ -110,7 +110,18 @@ const MarkdownContent = ({ content }: { content: string }) => (
       ),
       // Links
       a: ({ href, children }) => (
-        <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:opacity-80">
+        <a 
+          href={href} 
+          onClick={(e) => {
+            e.preventDefault();
+            if (href && chrome.tabs) {
+              chrome.tabs.create({ url: href });
+            } else if (href) {
+              window.open(href, "_blank", "noopener,noreferrer");
+            }
+          }}
+          className="text-primary underline underline-offset-2 hover:opacity-80 cursor-pointer"
+        >
           {children}
         </a>
       ),
@@ -229,18 +240,46 @@ const ToolConfirmationCard = ({
   );
 };
 
-const ToolResultBadge = ({ result }: { result: NormalizedToolResult }) => (
-  <div className="flex items-center gap-2 pl-9 text-[11px] text-muted-foreground">
-    {result.isError ? (
-      <XCircle className="size-3 shrink-0 text-destructive" />
-    ) : (
-      <CheckCircle2 className="size-3 shrink-0 text-green-600" />
-    )}
-    <span className={result.isError ? "text-destructive" : ""}>
-      {result.isError ? `Tool cancelled: ${result.name}` : `✓ ${result.name} completed`}
-    </span>
-  </div>
-);
+const ToolResultBadge = ({ result }: { result: NormalizedToolResult }) => {
+  const [expanded, setExpanded] = React.useState(false);
+  const resultText = React.useMemo(() => {
+    if (typeof result.output !== "string") {
+      return JSON.stringify(result.output, null, 2);
+    }
+    try {
+      const parsed = JSON.parse(result.output);
+      return JSON.stringify(parsed, null, 2);
+    } catch {
+      return result.output;
+    }
+  }, [result.output]);
+
+  return (
+    <div className="flex flex-col gap-1.5 pl-9 pb-1">
+      <div 
+        className="flex w-max cursor-pointer items-center gap-1.5 rounded-md text-[11px] text-muted-foreground outline-none transition-colors hover:text-foreground"
+        onClick={() => setExpanded(!expanded)}
+      >
+        {result.isError ? (
+          <XCircle className="size-3 shrink-0 text-destructive" />
+        ) : (
+          <CheckCircle2 className="size-3 shrink-0 text-green-600" />
+        )}
+        <span className={result.isError ? "text-destructive" : ""}>
+          {result.isError ? `Tool cancelled: ${result.name}` : `✓ ${result.name} completed`}
+        </span>
+        <ChevronDown className={`size-3 ml-0.5 transition-transform ${expanded ? "rotate-180" : ""}`} />
+      </div>
+      {expanded && (
+        <div className="max-h-64 overflow-y-auto rounded-md border bg-muted/30 px-3 py-2 mr-4">
+          <pre className="text-[10px] font-mono text-muted-foreground whitespace-pre-wrap break-words">
+            {resultText}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ConversationItem = ({
   meta,
@@ -278,25 +317,37 @@ const ConversationItem = ({
 
 const ModelSwitcher = ({
   activeProvider,
+  enabledProviders,
   saveProvider,
+  onActivateProvider,
 }: {
   activeProvider: ProviderConfig;
+  enabledProviders: ProviderConfig[];
   saveProvider: (c: ProviderConfig) => Promise<void>;
+  onActivateProvider: (id: string) => void;
 }) => {
   const [open, setOpen] = React.useState(false);
-  const [models, setModels] = React.useState<ModelInfo[]>([]);
+  const [modelsByProv, setModelsByProv] = React.useState<Record<string, ModelInfo[]>>({});
   const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
-    if (open && models.length === 0) {
+    if (open && Object.keys(modelsByProv).length === 0) {
       setLoading(true);
-      fetchModelsForProvider(activeProvider.providerId, activeProvider.apiKey, activeProvider.baseUrl)
-        .then((res) => {
-          if (res.ok) setModels(res.models);
+      Promise.all(
+        enabledProviders.map(p =>
+          fetchModelsForProvider(p.providerId, p.apiKey, p.baseUrl).then(res => ({ id: p.providerId, res }))
+        )
+      )
+        .then((results) => {
+          const next: Record<string, ModelInfo[]> = {};
+          for (const item of results) {
+            if (item.res.ok) next[item.id] = item.res.models;
+          }
+          setModelsByProv(next);
         })
         .finally(() => setLoading(false));
     }
-  }, [open, activeProvider]);
+  }, [open, enabledProviders]);
 
   return (
     <Popover onOpenChange={setOpen} open={open}>
@@ -314,27 +365,33 @@ const ModelSwitcher = ({
                 <span className="flex items-center justify-center gap-1"><Loader2 className="size-3 animate-spin"/> Loading...</span>
               ) : "No models found."}
             </CommandEmpty>
-            <CommandGroup className="capitalize" heading={activeProvider.providerId}>
-              {models.map((model) => (
-                <CommandItem
-                  key={model.id}
-                  onSelect={() => {
-                    if (activeProvider.model !== model.id) {
-                      void saveProvider({ ...activeProvider, model: model.id });
-                    }
-                    setOpen(false);
-                  }}
-                  value={model.id}
-                >
-                  <Check
-                    className={`mr-2 size-3.5 shrink-0 ${
-                      activeProvider.model === model.id ? "opacity-100" : "opacity-0"
-                    }`}
-                  />
-                  <span className="text-[11px] truncate">{model.label}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {enabledProviders.map((p) => {
+              const models = modelsByProv[p.providerId] || [];
+              if (models.length === 0) return null;
+              return (
+                <CommandGroup key={p.providerId} className="capitalize" heading={p.providerId}>
+                  {models.map((model) => {
+                    const isSelected = activeProvider.providerId === p.providerId && activeProvider.model === model.id;
+                    return (
+                      <CommandItem
+                        key={model.id}
+                        onSelect={() => {
+                          if (!isSelected) {
+                            void saveProvider({ ...p, model: model.id });
+                            onActivateProvider(p.providerId);
+                          }
+                          setOpen(false);
+                        }}
+                        value={`${p.providerId}-${model.label}`}
+                      >
+                        <Check className={`mr-2 size-3.5 shrink-0 ${isSelected ? "opacity-100" : "opacity-0"}`} />
+                        <span className="text-[11px] truncate">{model.label}</span>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              );
+            })}
           </CommandList>
         </Command>
       </PopoverContent>
@@ -362,7 +419,12 @@ export const App = () => {
   const streamingTextRef = React.useRef<string>("");
 
   const { store, saveProvider } = useProviderSettings();
-  const activeProvider = store.providers.find((p) => p.enabled);
+  const [activeProviderId, setActiveProviderId] = React.useState<string | null>(null);
+
+  const enabledProviders = store.providers.filter((p) => p.enabled);
+  const activeProvider = activeProviderId
+    ? enabledProviders.find((p) => p.providerId === activeProviderId) || enabledProviders[0]
+    : enabledProviders[0];
   const autoApproveRef = React.useRef(false);
   autoApproveRef.current = autoApprove;
 
@@ -651,7 +713,12 @@ export const App = () => {
               <div>
                 <h1 className="text-[13px] font-semibold leading-tight">AI Workspace</h1>
                 {activeProvider ? (
-                  <ModelSwitcher activeProvider={activeProvider} saveProvider={saveProvider} />
+                  <ModelSwitcher 
+                    activeProvider={activeProvider} 
+                    enabledProviders={enabledProviders}
+                    saveProvider={saveProvider} 
+                    onActivateProvider={setActiveProviderId}
+                  />
                 ) : (
                   <div className="text-[10px] text-destructive">No provider configured</div>
                 )}

@@ -78,7 +78,15 @@ const toGeminiContent = (message: ChatMessage): GeminiContent => {
           functionResponse: {
             name: message.toolName ?? "tool",
             response: (() => {
-              try { return JSON.parse(message.content); } catch { return { result: message.content }; }
+              try {
+                const parsed = JSON.parse(message.content);
+                if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+                  return parsed;
+                }
+                return { result: parsed };
+              } catch {
+                return { result: message.content };
+              }
             })(),
           },
         },
@@ -89,12 +97,28 @@ const toGeminiContent = (message: ChatMessage): GeminiContent => {
   return { role: "user", parts: [{ text: message.content }] };
 };
 
+const sanitizeGeminiSchema = (schema: unknown): unknown => {
+  if (typeof schema !== "object" || schema === null) return schema;
+  if (Array.isArray(schema)) {
+    return schema.map(sanitizeGeminiSchema);
+  }
+
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(schema)) {
+    if (key === "additionalProperties" || key === "$schema") {
+      continue;
+    }
+    result[key] = sanitizeGeminiSchema(value);
+  }
+  return result;
+};
+
 const toGeminiTool = (
   tool: NormalizedToolDefinition,
 ): GeminiFunctionDeclaration => ({
   name: tool.name,
   description: tool.description,
-  parameters: tool.inputSchema ?? {},
+  parameters: sanitizeGeminiSchema(tool.inputSchema ?? {}),
 });
 
 const toToolCall = (call: {

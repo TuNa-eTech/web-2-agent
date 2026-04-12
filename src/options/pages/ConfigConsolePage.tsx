@@ -206,9 +206,30 @@ export const ConfigConsolePage = () => {
              )}
              {activeTab === "servers" && (
                 <div className="flex h-full flex-col gap-4">
-                  <div className="border-b pb-4">
-                     <h2 className="text-lg font-semibold">Server Connections</h2>
-                     <p className="mt-1 text-sm text-muted-foreground">Monitor health state and available tool catalogs across all configured targets.</p>
+                  <div className="flex flex-row items-start justify-between border-b pb-4">
+                     <div>
+                       <h2 className="text-lg font-semibold">Server Connections</h2>
+                       <p className="mt-1 text-sm text-muted-foreground">Monitor health state and available tool catalogs across all configured targets.</p>
+                     </div>
+                     <Button
+                       onClick={testConnections}
+                       disabled={testing || saving || serverIndex.length === 0}
+                       variant="outline"
+                       size="sm"
+                       className="shrink-0"
+                     >
+                       {testing ? (
+                         <>
+                           <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                           Testing...
+                         </>
+                       ) : (
+                         <>
+                           <Server className="mr-2 size-4" />
+                           Test Connections
+                         </>
+                       )}
+                     </Button>
                   </div>
                   <ServerSummaryList
                     healthMap={healthMap}

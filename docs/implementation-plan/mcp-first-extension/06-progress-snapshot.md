@@ -12,6 +12,7 @@ Snapshot date: 2026-04-12
 - Config and Secure Storage:
   - raw JSON-first options console implemented
   - config validation, redaction, encryption, and split persistence added
+  - manual connection test controls added to the Server Connections dashboard
 - Runtime and Broker:
   - duplicate contracts removed from runtime code
   - runtime helpers now import canonical shared contracts

@@ -47,18 +47,29 @@ export type GeminiStreamChunk = {
   error?: { message?: string; code?: string };
 };
 
-const toGeminiContent = (message: {
-  role: "system" | "user" | "assistant" | "tool";
-  content: string;
-  toolName?: string;
-}): GeminiContent => {
-  if (message.role === "assistant") {
+import type { ChatMessage } from "../types";
+
+const toGeminiContent = (message: ChatMessage): GeminiContent => {
+  // Assistant message with tool calls
+  if (message.role === "assistant" && message.toolCalls?.length) {
     return {
       role: "model",
-      parts: [{ text: message.content }],
+      parts: message.toolCalls.map((tc) => ({
+        functionCall: {
+          name: tc.name,
+          args: (typeof tc.arguments === "object" && tc.arguments !== null
+            ? tc.arguments
+            : {}) as Record<string, unknown>,
+        },
+      })),
     };
   }
 
+  if (message.role === "assistant") {
+    return { role: "model", parts: [{ text: message.content }] };
+  }
+
+  // Tool result message
   if (message.role === "tool") {
     return {
       role: "user",
@@ -66,17 +77,16 @@ const toGeminiContent = (message: {
         {
           functionResponse: {
             name: message.toolName ?? "tool",
-            response: message.content,
+            response: (() => {
+              try { return JSON.parse(message.content); } catch { return { result: message.content }; }
+            })(),
           },
         },
       ],
     };
   }
 
-  return {
-    role: "user",
-    parts: [{ text: message.content }],
-  };
+  return { role: "user", parts: [{ text: message.content }] };
 };
 
 const toGeminiTool = (
@@ -144,13 +154,7 @@ export const GeminiAdapter: ProviderAdapter<
   id: "gemini",
   displayName: "Gemini",
   buildRequest: (context: ProviderRequestContext): GeminiRequest => {
-    const contents = context.messages.map((message) =>
-      toGeminiContent({
-        role: message.role,
-        content: message.content,
-        toolName: message.toolName,
-      }),
-    );
+    const contents = context.messages.map((message) => toGeminiContent(message));
 
     const tools = context.tools.length
       ? [{ functionDeclarations: context.tools.map(toGeminiTool) }]

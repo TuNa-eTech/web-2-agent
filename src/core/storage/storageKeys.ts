@@ -6,4 +6,6 @@ export const STORAGE_KEYS = {
   toolCatalog: "mcp.storage.toolCatalog",
   providerSettings: "ai.storage.providerSettings",
   mcpPreferences: "mcp.storage.preferences",
+  conversationIndex: "ai.conversations.index",
+  conversationMessages: (id: string) => `ai.conversations.${id}.messages`,
 };

@@ -10,6 +10,12 @@
 /** Union of built-in provider identifiers. Extend this when adding providers. */
 export type AiProviderId = "gemini" | "openai";
 
+/** A selectable model entry for a provider. */
+export type ModelEntry = {
+  id: string;
+  displayName: string;
+};
+
 /** Static metadata that describes a provider (never stored encrypted). */
 export type ProviderMeta = {
   id: AiProviderId;
@@ -20,6 +26,8 @@ export type ProviderMeta = {
   apiKeyHelpUrl: string;
   /** Fallback model id used before the model list is fetched from the API. */
   defaultModelId: string;
+  /** Known selectable models for this provider. */
+  models: ModelEntry[];
   /** Optional base URL override hint (e.g. for proxies). */
   supportsBaseUrl: boolean;
   defaultBaseUrl?: string;

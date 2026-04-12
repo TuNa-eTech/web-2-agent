@@ -32,8 +32,10 @@ export type ChatMessage = {
   content: string;
   createdAt: string;
   status?: "streaming" | "complete" | "error";
-  toolCallId?: string;
-  toolName?: string;
+  toolCallId?: string;    // for role:"tool" — references the tool call id
+  toolName?: string;      // for role:"tool" — tool function name
+  /** Set on role:"assistant" messages that issued tool calls */
+  toolCalls?: Array<{ id: string; name: string; arguments: unknown }>;
   metadata?: Record<string, unknown>;
 };
 

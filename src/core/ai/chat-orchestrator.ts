@@ -38,7 +38,6 @@ export type ChatOrchestratorEvent =
   | { type: "done"; turnId: string; reason?: string };
 
 export type ChatOrchestratorDependencies = {
-  provider: ProviderAdapter;
   broker: BrokerToolClient;
   clock: () => string;
 };
@@ -46,6 +45,7 @@ export type ChatOrchestratorDependencies = {
 export type ChatOrchestrator = {
   startTurn: (input: StartTurnInput) => AsyncIterable<ChatOrchestratorEvent>;
   submitConfirmation: (
+    confirmationId: string,
     decision: ConfirmationDecision,
   ) => Promise<void> | void;
   cancelTurn: (turnId: string) => void;

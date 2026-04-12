@@ -8,12 +8,10 @@ import type {
   ProviderStreamEvent,
 } from "../provider-types";
 
-export type OpenAiMessage = {
-  role: "system" | "user" | "assistant" | "tool";
-  content: string;
-  name?: string;
-  tool_call_id?: string;
-};
+export type OpenAiMessage =
+  | { role: "system" | "user"; content: string }
+  | { role: "assistant"; content: string | null; tool_calls?: Array<{ id: string; type: "function"; function: { name: string; arguments: string } }> }
+  | { role: "tool"; content: string; tool_call_id: string };
 
 export type OpenAiToolDefinition = {
   type: "function";
@@ -38,6 +36,7 @@ export type OpenAiStreamChunk = {
     delta?: {
       content?: string;
       tool_calls?: Array<{
+        index?: number;      // position of this tool call in the list
         id?: string;
         function?: { name?: string; arguments?: string };
       }>;
@@ -47,19 +46,53 @@ export type OpenAiStreamChunk = {
   error?: { message?: string; code?: string };
 };
 
+// Module-level accumulator for streaming tool call fragments (keyed by index)
+const toolCallAccumulators = new WeakMap<object, Map<number, { id: string; name: string; args: string }>>();
+const chunkKey = {};  // stable key per import cycle
+
+const getAccumulator = () => {
+  if (!toolCallAccumulators.has(chunkKey)) {
+    toolCallAccumulators.set(chunkKey, new Map());
+  }
+  return toolCallAccumulators.get(chunkKey)!;
+};
+
 const EMPTY_CONTENT = "";
 
-const toOpenAiMessage = (message: {
-  role: "system" | "user" | "assistant" | "tool";
-  content: string;
-  toolCallId?: string;
-  toolName?: string;
-}): OpenAiMessage => ({
-  role: message.role,
-  content: message.content ?? EMPTY_CONTENT,
-  tool_call_id: message.toolCallId,
-  name: message.toolName,
-});
+import type { ChatMessage } from "../types";
+
+const toOpenAiMessage = (message: ChatMessage): OpenAiMessage => {
+  // Assistant message with tool calls (function_call response)
+  if (message.role === "assistant" && message.toolCalls?.length) {
+    return {
+      role: "assistant",
+      content: message.content || null,
+      tool_calls: message.toolCalls.map((tc) => ({
+        id: tc.id,
+        type: "function",
+        function: {
+          name: tc.name,
+          arguments: typeof tc.arguments === "string" ? tc.arguments : JSON.stringify(tc.arguments),
+        },
+      })),
+    };
+  }
+
+  // Tool result message
+  if (message.role === "tool") {
+    return {
+      role: "tool",
+      content: typeof message.content === "string" ? message.content : JSON.stringify(message.content),
+      tool_call_id: message.toolCallId ?? "",
+    };
+  }
+
+  // Regular system/user/assistant
+  return {
+    role: message.role as "system" | "user" | "assistant",
+    content: message.content ?? "",
+  };
+};
 
 const toOpenAiTool = (
   tool: NormalizedToolDefinition,
@@ -107,21 +140,55 @@ const parseOpenAiStreamChunk = (
   }
 
   const events: ProviderStreamEvent[] = [];
+  const acc = getAccumulator();
   const choices = chunk.choices ?? [];
-  choices.forEach((choice, index) => {
+
+  choices.forEach((choice) => {
     const delta = choice.delta;
+
+    // Text token
     if (delta?.content) {
       events.push({ type: "token", delta: delta.content });
     }
+
+    // Accumulate streaming tool_call fragments by index
     if (delta?.tool_calls) {
-      delta.tool_calls.forEach((call, toolIndex) => {
-        events.push({
-          type: "tool-call",
-          call: toToolCall(call, `tool-${index}-${toolIndex}`),
-        });
+      delta.tool_calls.forEach((fragment) => {
+        const idx = fragment.index ?? 0;
+        const existing = acc.get(idx);
+        if (existing) {
+          // Append argument fragment to existing accumulation
+          existing.args += fragment.function?.arguments ?? "";
+        } else {
+          // First chunk for this tool call — initialise entry
+          acc.set(idx, {
+            id: fragment.id ?? `tool-${idx}`,
+            name: fragment.function?.name ?? "unknown_tool",
+            args: fragment.function?.arguments ?? "",
+          });
+        }
       });
     }
-    if (choice.finish_reason) {
+
+    // When streaming ends for this choice, flush complete tool calls
+    if (choice.finish_reason === "tool_calls") {
+      acc.forEach((entry) => {
+        if (entry.name && entry.name !== "unknown_tool") {
+          events.push({
+            type: "tool-call",
+            call: {
+              id: entry.id,
+              name: entry.name,
+              arguments: parseToolArguments(entry.args),
+            },
+          });
+        }
+      });
+      acc.clear();
+      events.push({ type: "done", reason: "tool_calls" });
+    }
+
+    if (choice.finish_reason && choice.finish_reason !== "tool_calls") {
       events.push({ type: "done", reason: choice.finish_reason });
     }
   });
@@ -136,29 +203,17 @@ export const OpenAiAdapter: ProviderAdapter<
   id: "openai",
   displayName: "OpenAI",
   buildRequest: (context: ProviderRequestContext): OpenAiRequest => {
-    const systemMessages = context.systemPrompt
-      ? [
-          toOpenAiMessage({
-            role: "system",
-            content: context.systemPrompt,
-          }),
-        ]
+    const systemMessages: OpenAiMessage[] = context.systemPrompt
+      ? [{ role: "system", content: context.systemPrompt }]
       : [];
 
-    const messages = context.messages.map((message) =>
-      toOpenAiMessage({
-        role: message.role,
-        content: message.content,
-        toolCallId: message.toolCallId,
-        toolName: message.toolName,
-      }),
-    );
+    const messages = context.messages.map((m) => toOpenAiMessage(m));
 
     return {
       model: context.model,
       messages: [...systemMessages, ...messages],
-      tools: context.tools.map(toOpenAiTool),
-      tool_choice: context.tools.length ? "auto" : "none",
+      tools: context.tools.length ? context.tools.map(toOpenAiTool) : undefined,
+      tool_choice: context.tools.length ? "auto" : undefined,
       stream: true,
       temperature: context.temperature,
     };

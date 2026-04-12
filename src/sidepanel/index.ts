@@ -1,5 +1,6 @@
 import { StrictMode, createElement } from "react";
 import { createRoot } from "react-dom/client";
+import { App } from "./App";
 import "../styles/globals.css";
 
 document.body.dataset.surface = "sidepanel";
@@ -10,13 +11,6 @@ if (!container) {
   throw new Error("Side panel root element not found.");
 }
 
-const Placeholder = () =>
-  createElement(
-    "div",
-    { className: "flex h-screen items-center justify-center text-muted-foreground text-sm" },
-    "Side panel — coming soon",
-  );
-
 createRoot(container).render(
-  createElement(StrictMode, null, createElement(Placeholder)),
+  createElement(StrictMode, null, createElement(App)),
 );

@@ -17,14 +17,14 @@ const COMMON_PATH_ENTRIES =
   process.platform === "win32"
     ? []
     : [
-        "/opt/homebrew/bin",
-        "/usr/local/bin",
-        "/usr/bin",
-        "/bin",
-        "/usr/sbin",
-        "/sbin",
-        `${homedir()}/.local/bin`,
-      ];
+      "/opt/homebrew/bin",
+      "/usr/local/bin",
+      "/usr/bin",
+      "/bin",
+      "/usr/sbin",
+      "/sbin",
+      `${homedir()}/.local/bin`,
+    ];
 
 const splitPathEntries = (value?: string): string[] =>
   (value ?? "")
@@ -243,8 +243,8 @@ export class ProcessHandle {
         err instanceof CompanionError
           ? this.decorateLifecycleError(err, "during initialize")
           : new CompanionError("INITIALIZE_FAILED", "Failed to initialize MCP server.", {
-              message: err instanceof Error ? err.message : String(err),
-            });
+            message: err instanceof Error ? err.message : String(err),
+          });
       this.lastError = error;
       throw error;
     }
@@ -258,8 +258,8 @@ export class ProcessHandle {
         err instanceof CompanionError
           ? this.decorateLifecycleError(err, "during tools/list")
           : new CompanionError("TOOLS_LIST_FAILED", "Failed to list tools.", {
-              message: err instanceof Error ? err.message : String(err),
-            });
+            message: err instanceof Error ? err.message : String(err),
+          });
       this.lastError = error;
       throw error;
     }
@@ -273,8 +273,8 @@ export class ProcessHandle {
         err instanceof CompanionError
           ? this.decorateLifecycleError(err, `during tools/call (${toolName})`)
           : new CompanionError("TOOL_CALL_FAILED", "Failed to call tool.", {
-              message: err instanceof Error ? err.message : String(err),
-            });
+            message: err instanceof Error ? err.message : String(err),
+          });
       this.lastError = error;
       throw error;
     }

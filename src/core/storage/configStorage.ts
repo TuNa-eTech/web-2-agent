@@ -17,8 +17,9 @@ type SaveResult =
   | { ok: false; errors: { code: string; message: string; serverId?: string }[] };
 
 const getTransport = (entry: Record<string, unknown>) => {
-  if (typeof entry.url === "string") return "streamable-http";
-  return "stdio";
+  if (typeof entry.url !== "string") return "stdio";
+  if (entry.transport === "sse") return "sse";
+  return "streamable-http";
 };
 
 const getRuntime = (entry: Record<string, unknown>) => {
@@ -56,6 +57,7 @@ const buildServerIndex = (
       status,
       hasSecrets: hasSecrets(entry),
       lastCheckedAt,
+      url: typeof entry.url === "string" ? entry.url : null,
     });
   }
 

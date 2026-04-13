@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { estimateTokens } from "../../core/skills/types";
-import type { SkillContent, SkillReference } from "../../core/skills/types";
+import type { SkillContent, SkillReference, SkillInjection } from "../../core/skills/types";
 
 type ReferenceInput = { name: string; content: string };
 
@@ -46,6 +46,8 @@ type SkillEditorProps = {
   initial?: {
     name: string;
     description: string;
+    injection: SkillInjection;
+    tags: string[];
     content: SkillContent;
   };
   onSave: (data: {
@@ -53,6 +55,8 @@ type SkillEditorProps = {
     description: string;
     coreContent: string;
     references: Omit<SkillReference, "id" | "tokenEstimate">[];
+    injection: SkillInjection;
+    tags: string[];
   }) => void;
 };
 
@@ -66,6 +70,8 @@ export const SkillEditor = ({
   const [description, setDescription] = React.useState("");
   const [coreContent, setCoreContent] = React.useState("");
   const [references, setReferences] = React.useState<ReferenceInput[]>([]);
+  const [injection, setInjection] = React.useState<SkillInjection>("always");
+  const [tagsInput, setTagsInput] = React.useState("");
 
   React.useEffect(() => {
     if (open && initial) {
@@ -75,11 +81,15 @@ export const SkillEditor = ({
       setReferences(
         initial.content.references.map((r) => ({ name: r.name, content: r.content })),
       );
+      setInjection(initial.injection);
+      setTagsInput(initial.tags.join(", "));
     } else if (open) {
       setName("");
       setDescription("");
       setCoreContent("");
       setReferences([]);
+      setInjection("always");
+      setTagsInput("");
     }
   }, [open, initial]);
 
@@ -130,6 +140,11 @@ export const SkillEditor = ({
     setReferences((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const parsedTags = tagsInput
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+
   const handleSave = () => {
     if (!name.trim() || !coreContent.trim()) return;
     onSave({
@@ -137,6 +152,8 @@ export const SkillEditor = ({
       description: description.trim(),
       coreContent,
       references: references.map((r) => ({ name: r.name, content: r.content })),
+      injection,
+      tags: parsedTags,
     });
     onOpenChange(false);
   };
@@ -182,6 +199,64 @@ export const SkillEditor = ({
               className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
           </div>
+
+          {/* Injection Mode */}
+          <div className="space-y-2">
+            <Label>Injection Mode</Label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setInjection("always")}
+                className={`flex-1 rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+                  injection === "always"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-transparent text-muted-foreground hover:border-foreground/30"
+                }`}
+              >
+                Always
+                <span className="block text-[10px] font-normal mt-0.5 opacity-70">
+                  Included in every message
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setInjection("auto")}
+                className={`flex-1 rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+                  injection === "auto"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-transparent text-muted-foreground hover:border-foreground/30"
+                }`}
+              >
+                Auto
+                <span className="block text-[10px] font-normal mt-0.5 opacity-70">
+                  Only when message matches tags
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Tags (shown when injection=auto) */}
+          {injection === "auto" && (
+            <div className="space-y-2">
+              <Label htmlFor="skill-tags">Tags</Label>
+              <input
+                id="skill-tags"
+                value={tagsInput}
+                onChange={(e) => setTagsInput(e.target.value)}
+                placeholder="react, component, hooks (comma-separated)"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+              {parsedTags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {parsedTags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-[10px]">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Core Content — Edit / Preview tabs */}
           <div className="space-y-2">

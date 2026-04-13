@@ -20,6 +20,7 @@ import {
   XCircle,
   AlertTriangle,
   Zap,
+  Maximize,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -433,7 +434,15 @@ export const App = () => {
     void getStorageItem<boolean>("ai.chat.autoApprove").then((v) => {
       if (v) setAutoApprove(true);
     });
+    void getStorageItem<string>("ai.chat.activeProviderId").then((v) => {
+      if (v) setActiveProviderId(v);
+    });
   }, []);
+
+  const handleActivateProvider = (id: string) => {
+    setActiveProviderId(id);
+    void setStorageItem("ai.chat.activeProviderId", id);
+  };
 
   const toggleAutoApprove = () => {
     setAutoApprove((prev) => {
@@ -717,7 +726,7 @@ export const App = () => {
                     activeProvider={activeProvider} 
                     enabledProviders={enabledProviders}
                     saveProvider={saveProvider} 
-                    onActivateProvider={setActiveProviderId}
+                    onActivateProvider={handleActivateProvider}
                   />
                 ) : (
                   <div className="text-[10px] text-destructive">No provider configured</div>
@@ -739,6 +748,9 @@ export const App = () => {
                 title={autoApprove ? "Auto-approve ON" : "Auto-approve OFF"}
               >
                 <Zap className={`size-3.5 ${autoApprove ? "fill-amber-400" : ""}`} />
+              </Button>
+              <Button className="size-7 text-muted-foreground" onClick={() => chrome.tabs?.create({ url: window.location.href })} size="icon" variant="ghost" title="Open in Tab">
+                <Maximize className="size-3.5" />
               </Button>
               <Button className="size-7 text-muted-foreground" onClick={openOptions} size="icon" variant="ghost" title="Settings">
                 <Settings2 className="size-3.5" />

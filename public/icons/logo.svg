@@ -1,0 +1,43 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Định nghĩa bảng màu Neo-Brutalism -->
+  <defs>
+    <style>
+      .bg-card { fill: #FFDE00; } /* Vàng rực đặc trưng */
+      .fish-body { fill: #00D1FF; } /* Xanh Cyan */
+      .stroke-bold { stroke: #000000; stroke-width: 14; stroke-linejoin: round; stroke-linecap: round; }
+      .shadow-bold { fill: #000000; }
+      .accent-green { fill: #39FF14; } /* Xanh lá Neon */
+    </style>
+  </defs>
+
+  <!-- Nền hình vuông tràn viền (Không padding, Giữ Radius) -->
+  <rect x="0" y="0" width="512" height="512" rx="40" class="bg-card stroke-bold" />
+  
+  <!-- Nhóm con cá được phóng to và căn giữa lại để vừa vặn với kích thước mới -->
+  <g transform="translate(10, 40) scale(0.95)">
+    <!-- "Bóng cứng" (Hard Shadow) -->
+    <path d="M155 305C155 205 235 155 355 155C445 155 465 235 465 275C465 315 425 395 355 395C275 395 215 355 155 305Z" class="shadow-bold" transform="translate(12, 12)" />
+
+    <!-- Thân cá chính -->
+    <path d="M140 290C140 190 220 140 340 140C460 140 450 230 450 270C450 310 400 380 340 380C260 380 200 340 140 290Z" class="fish-body stroke-bold" />
+
+    <!-- Đuôi cá -->
+    <path d="M150 295L70 370V200L150 295Z" class="fish-body stroke-bold" />
+    
+    <!-- Biểu tượng Wi-Fi/Signal -->
+    <path d="M280 110C310 80 370 80 400 110" class="stroke-bold" fill="none" />
+    <path d="M250 80C300 40 380 40 430 80" class="stroke-bold" fill="none" />
+
+    <!-- Mắt cá -->
+    <circle cx="400" cy="245" r="20" fill="white" class="stroke-bold" />
+    <circle cx="410" cy="235" r="6" fill="black" />
+
+    <!-- Chi tiết "Plug" ở đuôi - Đưa vào trong khung hoàn toàn -->
+    <rect x="50" y="265" width="40" height="45" rx="5" class="accent-green stroke-bold" />
+    <path d="M25 280H50M25 295H50" class="stroke-bold" />
+
+    <!-- Các đường line trang trí -->
+    <path d="M220 230H320" class="stroke-bold" opacity="0.2" />
+    <path d="M240 260H340" class="stroke-bold" opacity="0.2" />
+  </g>
+</svg>

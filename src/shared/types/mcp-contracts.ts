@@ -9,6 +9,19 @@ export type RawMcpHttpServerConfig = {
   preset?: string;
 };
 
+/**
+ * Legacy SSE transport (MCP spec 2024-11-05).
+ * Uses a persistent GET /sse stream for server→client messages
+ * and a separate POST /messages endpoint for client→server requests.
+ * Identified by `transport: "sse"` in the config.
+ */
+export type RawMcpSseServerConfig = {
+  transport: "sse";
+  url: string;
+  headers?: Record<string, string>;
+  preset?: string;
+};
+
 export type RawMcpStdioServerConfig = {
   command: string;
   args?: string[];
@@ -17,7 +30,11 @@ export type RawMcpStdioServerConfig = {
   preset?: string;
 };
 
-export type RawMcpServerConfig = RawMcpHttpServerConfig | RawMcpStdioServerConfig;
+export type RawMcpServerConfig =
+  | RawMcpHttpServerConfig
+  | RawMcpSseServerConfig
+  | RawMcpStdioServerConfig;
+
 
 export type ConnectionState =
   | "draft"
@@ -60,6 +77,7 @@ export type ServerIndex = {
   status: ConnectionState;
   hasSecrets: boolean;
   lastCheckedAt: string | null;
+  url: string | null;
 };
 
 export type ConnectionErrorCategory =

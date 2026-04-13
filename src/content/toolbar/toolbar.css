@@ -1,0 +1,400 @@
+/* ---------------------------------------------------------------------------
+ * Toolbar CSS — self-contained, no Tailwind dependency
+ * Platform-specific variants via .toolbar--gemini / .toolbar--chatgpt
+ * --------------------------------------------------------------------------- */
+
+/* ---- Reset inside shadow DOM ---- */
+:host {
+  display: inline-flex;
+  align-items: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #374151;
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---- Toolbar root ---- */
+.toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}
+
+/* ---- Trigger button ---- */
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  line-height: 1;
+  height: 28px;
+}
+.toolbar-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+.toolbar-btn:active {
+  transform: scale(0.97);
+}
+
+/* Primary CTA variant (Inject Context) */
+.toolbar-btn--primary {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #1d4ed8;
+}
+.toolbar-btn--primary:hover {
+  background: #1d4ed8;
+  border-color: #1e40af;
+}
+
+/* Done state */
+.toolbar-btn--done {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #bbf7d0;
+  cursor: default;
+}
+.toolbar-btn:disabled {
+  opacity: 0.8;
+  cursor: default;
+  transform: none;
+}
+
+.toolbar-btn .icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.toolbar-btn .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* ---- Badge color variants ---- */
+.badge--tools {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.badge--skills {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+/* ---- Dropdown ---- */
+.dropdown {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  min-width: 260px;
+  max-width: 340px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+  z-index: 99999;
+  padding: 4px;
+  animation: dropIn 0.15s ease;
+}
+
+@keyframes dropIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---- Dropdown header ---- */
+.dropdown-header {
+  padding: 8px 10px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+  border-bottom: 1px solid #f3f4f6;
+  margin-bottom: 2px;
+}
+
+/* ---- Dropdown group ---- */
+.dropdown-group-label {
+  padding: 6px 10px 3px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+/* ---- Dropdown item ---- */
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s ease;
+  font-size: 12px;
+  color: #374151;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+.dropdown-item:hover {
+  background: #f3f4f6;
+}
+.dropdown-item:active {
+  background: #e5e7eb;
+}
+
+.dropdown-item .item-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+}
+
+.dropdown-item .item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dropdown-item .item-name {
+  font-weight: 500;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-item .item-desc {
+  font-size: 10px;
+  color: #9ca3af;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+/* ---- Risk badge ---- */
+.risk-badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.risk-badge--read {
+  background: #dcfce7;
+  color: #166534;
+}
+.risk-badge--write {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.risk-badge--unknown {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* ---- Toggle switch (for skills) ---- */
+.toggle {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  border-radius: 9px;
+  background: #d1d5db;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+  border: none;
+  padding: 0;
+}
+.toggle--on {
+  background: #7c3aed;
+}
+.toggle::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+.toggle--on::after {
+  transform: translateX(14px);
+}
+
+/* ---- Injection badge ---- */
+.injection-badge {
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #f3f4f6;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+/* ---- Empty state ---- */
+.dropdown-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* ---- Scrollbar ---- */
+.dropdown::-webkit-scrollbar {
+  width: 4px;
+}
+.dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dropdown::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 2px;
+}
+
+/* ---- Overlay (click-outside catcher) ---- */
+.dropdown-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99998;
+}
+
+/* ---- Toast notification ---- */
+.toast {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 99999;
+  animation: toastIn 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.toast--loading {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+.toast--success {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+.toast--error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.toast-icon {
+  font-size: 13px;
+}
+.toast-message {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.toast-dismiss {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: inherit;
+  opacity: 0.6;
+  padding: 0 2px;
+}
+.toast-dismiss:hover {
+  opacity: 1;
+}
+
+/* Loading spinner animation for toast icon */
+.toast--loading .toast-icon {
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+/* ================================================================
+   Platform-specific overrides
+   ================================================================ */
+
+/* Gemini: Material-esque feel */
+.toolbar--gemini .toolbar-btn {
+  border-radius: 20px;
+  font-family: "Google Sans", Roboto, Arial, sans-serif;
+}
+.toolbar--gemini .dropdown {
+  border-radius: 12px;
+  font-family: "Google Sans", Roboto, Arial, sans-serif;
+}
+
+/* ChatGPT: Flatter, darker borders */
+.toolbar--chatgpt .toolbar-btn {
+  border-radius: 10px;
+  border-color: #e5e7eb;
+  background: #ffffff;
+}
+.toolbar--chatgpt .toolbar-btn:hover {
+  background: #f9fafb;
+}
+.toolbar--chatgpt .dropdown {
+  border-radius: 8px;
+}

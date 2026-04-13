@@ -182,10 +182,10 @@ export const registerPortRouter = () => {
           }
 
           try {
-            // Re-fetch tools and assemble system prompt fresh each turn
+            // Re-fetch tools; assemble system prompt with tag matching against user message
             const [availableTools, systemPrompt] = await Promise.all([
               broker.listTools(),
-              assembleSystemPrompt(),
+              assembleSystemPrompt(payload.message),
             ]);
 
             const input: StartTurnInput = {

@@ -20,6 +20,27 @@ export default defineManifest({
   },
   permissions: ["storage", "unlimitedStorage", "sidePanel", "nativeMessaging"],
   optional_host_permissions: ["*://*/*"],
+  content_scripts: [
+    {
+      matches: [
+        "*://gemini.google.com/*",
+        "*://chatgpt.com/*",
+        "*://chat.openai.com/*"
+      ],
+      js: ["src/content/index.tsx"],
+      run_at: "document_idle"
+    }
+  ],
+  web_accessible_resources: [
+    {
+      resources: ["content/*", "*.css", "public/*"],
+      matches: [
+        "*://gemini.google.com/*",
+        "*://chatgpt.com/*",
+        "*://chat.openai.com/*"
+      ]
+    }
+  ],
   icons: {
     "16": "public/icons/icon16.png",
     "32": "public/icons/icon32.png",

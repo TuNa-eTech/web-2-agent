@@ -1,3 +1,3 @@
 export * from "./types";
 export * from "./skillStorage";
-export { assembleSystemPrompt } from "./skillAssembler";
+export { assembleSystemPrompt, invalidateSkillCache } from "./skillAssembler";

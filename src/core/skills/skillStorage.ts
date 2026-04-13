@@ -5,6 +5,7 @@ import {
   type SkillMeta,
   type SkillContent,
   type SkillReference,
+  type SkillInjection,
   EMPTY_SKILL_INDEX,
   estimateTokens,
 } from "./types";
@@ -47,6 +48,8 @@ export const createSkill = async (
   description: string,
   coreContent: string,
   references: Omit<SkillReference, "id" | "tokenEstimate">[] = [],
+  injection: SkillInjection = "always",
+  tags: string[] = [],
 ): Promise<SkillMeta> => {
   const index = await loadSkillIndex();
   const now = new Date().toISOString();
@@ -67,6 +70,8 @@ export const createSkill = async (
     name,
     description,
     enabled: true,
+    injection,
+    tags,
     priority: index.skills.length,
     coreTokenEstimate,
     totalTokenEstimate,
@@ -92,6 +97,8 @@ export const updateSkill = async (
     description?: string;
     coreContent?: string;
     references?: Omit<SkillReference, "id" | "tokenEstimate">[];
+    injection?: SkillInjection;
+    tags?: string[];
   },
 ): Promise<void> => {
   const [index, existingContent] = await Promise.all([
@@ -123,6 +130,8 @@ export const updateSkill = async (
             ...s,
             name: updates.name ?? s.name,
             description: updates.description ?? s.description,
+            injection: updates.injection ?? s.injection,
+            tags: updates.tags ?? s.tags,
             coreTokenEstimate,
             totalTokenEstimate,
             updatedAt: new Date().toISOString(),

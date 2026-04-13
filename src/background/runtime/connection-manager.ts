@@ -6,11 +6,12 @@ import type {
   RawMcpServerConfig,
   ToolCatalog,
 } from "../../shared/types";
-import { getServerEntries, isHttpServerConfig, isStdioServerConfig } from "../../shared/lib/configDocument";
+import { getServerEntries, isHttpServerConfig, isSseServerConfig, isStdioServerConfig } from "../../shared/lib/configDocument";
 import { createCompanionTransport } from "../../core/mcp/companionTransport";
 import { createHttpTransport } from "../../core/mcp/httpTransport";
+import { createLegacySseTransport } from "../../core/mcp/legacySseTransport";
 import type { McpInitializeResult, McpToolDefinition } from "../../core/mcp/types";
-import { ensureHostPermission } from "../../core/permissions/hostPermissions";
+import { hasHostPermission } from "../../core/permissions/hostPermissions";
 import { normalizeError } from "../../core/utils/normalizeError";
 import { nowIso } from "../../core/utils/time";
 import { loadParsedConfigDocument, persistRuntimeState } from "../../core/storage/configStorage";
@@ -130,15 +131,41 @@ const createServerTester = () => {
 
     try {
       if (isHttpServerConfig(config)) {
-        const allowed = await ensureHostPermission(config.url, true);
+        // NOTE: chrome.permissions.request() CANNOT be called from the
+        // background service worker — it requires a direct user gesture in
+        // the options/popup page. We only *check* here; if permission is
+        // missing we surface a clear error so the options UI can prompt.
+        const allowed = await hasHostPermission(config.url);
         if (!allowed) {
           throw {
             category: "permission",
-            message: `Host permission denied for ${config.url}.`,
+            message: `Host permission not granted for ${config.url}. Open the extension options page and click "Grant Permission" to allow access.`,
           };
         }
 
         const transport = createHttpTransport({
+          url: config.url,
+          headers: config.headers,
+        });
+        const initializeResult = await transport.initialize();
+        await transport.notifyInitialized();
+        const listToolsResult = await transport.listTools();
+        return {
+          health: createSuccessfulHealth(checkedAt, initializeResult, listToolsResult.tools),
+          tools: toolBroker.normalizeDiscoveredTools(serverId, listToolsResult.tools, policy),
+        };
+      }
+
+      if (isSseServerConfig(config)) {
+        const allowed = await hasHostPermission(config.url);
+        if (!allowed) {
+          throw {
+            category: "permission",
+            message: `Host permission not granted for ${config.url}. Open the extension options page and click "Grant Permission" to allow access.`,
+          };
+        }
+
+        const transport = createLegacySseTransport({
           url: config.url,
           headers: config.headers,
         });

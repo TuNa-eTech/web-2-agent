@@ -245,6 +245,7 @@ export const ConfigConsolePage = () => {
                   <ServerSummaryList
                     healthMap={healthMap}
                     mcpPreferences={mcpPreferences}
+                    onTestConnections={testConnections}
                     onToggleServer={toggleServer}
                     onToggleTool={toggleTool}
                     serverIndex={serverIndex}

@@ -247,6 +247,9 @@ export class DefaultChatOrchestrator implements ChatOrchestrator {
         throw new Error(`Unknown provider: ${providerId}`);
       }
 
+      // Ensure we don't exceed provider tool limits (OpenAI and Gemini both limit to 128 tools)
+      const providerTools = tools ? tools.slice(0, 128) : [];
+
       // Start with history provided by UI (does NOT include the current user message),
       // then append the current user message once.
       let messages: ChatMessage[] = [
@@ -263,8 +266,8 @@ export class DefaultChatOrchestrator implements ChatOrchestrator {
         assistantText = "";
 
         const streamGen = providerId === "gemini"
-          ? this.streamOnceGemini(turnId, model, config.apiKey, messages, tools, systemPrompt)
-          : this.streamOnceOpenAi(turnId, model, config.apiKey, config.baseUrl, messages, tools, systemPrompt);
+          ? this.streamOnceGemini(turnId, model, config.apiKey, messages, providerTools, systemPrompt)
+          : this.streamOnceOpenAi(turnId, model, config.apiKey, config.baseUrl, messages, providerTools, systemPrompt);
 
         for await (const ev of streamGen) {
           if ((ev as any).type === "__tool-result__") {

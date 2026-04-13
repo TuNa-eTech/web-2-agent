@@ -2,6 +2,7 @@ import type {
   RawMcpConfigDocument,
   RawMcpHttpServerConfig,
   RawMcpServerConfig,
+  RawMcpSseServerConfig,
   RawMcpStdioServerConfig,
 } from "../types";
 import type { ValidationIssue } from "./configValidation";
@@ -26,10 +27,27 @@ export const parseRawConfigDocument = (
   };
 };
 
+/**
+ * Streamable HTTP transport (MCP spec 2025-03-26).
+ * Identified by having a `url` field WITHOUT `transport: "sse"`.
+ */
 export const isHttpServerConfig = (
   config: RawMcpServerConfig,
 ): config is RawMcpHttpServerConfig =>
-  "url" in config && typeof config.url === "string";
+  "url" in config &&
+  typeof config.url === "string" &&
+  (config as { transport?: string }).transport !== "sse";
+
+/**
+ * Legacy SSE transport (MCP spec 2024-11-05).
+ * Identified by `transport: "sse"` explicitly set.
+ */
+export const isSseServerConfig = (
+  config: RawMcpServerConfig,
+): config is RawMcpSseServerConfig =>
+  "url" in config &&
+  typeof config.url === "string" &&
+  (config as { transport?: string }).transport === "sse";
 
 export const isStdioServerConfig = (
   config: RawMcpServerConfig,

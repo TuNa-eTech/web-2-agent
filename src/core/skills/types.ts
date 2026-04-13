@@ -2,6 +2,8 @@
 // Skill data model
 // ---------------------------------------------------------------------------
 
+export type SkillInjection = "always" | "auto";
+
 export type SkillReference = {
   id: string;
   name: string;
@@ -19,6 +21,8 @@ export type SkillMeta = {
   name: string;
   description: string;
   enabled: boolean;
+  injection: SkillInjection;
+  tags: string[];
   priority: number;
   coreTokenEstimate: number;
   totalTokenEstimate: number;

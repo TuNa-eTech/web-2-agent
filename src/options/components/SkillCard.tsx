@@ -47,6 +47,12 @@ export const SkillCard = ({ skill, onToggle, onEdit, onDelete }: SkillCardProps)
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium truncate">{skill.name}</span>
+          <Badge
+            variant={skill.injection === "always" ? "default" : "outline"}
+            className="text-[10px] shrink-0"
+          >
+            {skill.injection === "always" ? "Always" : "Auto"}
+          </Badge>
           <Badge variant="secondary" className="text-[10px] shrink-0">
             ~{skill.totalTokenEstimate} tokens
           </Badge>
@@ -54,6 +60,11 @@ export const SkillCard = ({ skill, onToggle, onEdit, onDelete }: SkillCardProps)
         {skill.description && (
           <p className="text-xs text-muted-foreground mt-0.5 truncate">
             {skill.description}
+            {skill.injection === "auto" && skill.tags.length > 0 && (
+              <span className="ml-1 text-muted-foreground/60">
+                [{skill.tags.join(", ")}]
+              </span>
+            )}
           </p>
         )}
       </div>

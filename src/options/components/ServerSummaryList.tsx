@@ -1,6 +1,7 @@
 import * as React from "react";
-import { Cable, ChevronDown, ChevronRight, KeyRound, Server, Wrench } from "lucide-react";
+import { Cable, ChevronDown, ChevronRight, KeyRound, Server, ShieldCheck, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { formatLabel, formatTimestamp, getConnectionBadgeVariant } from "@/shared/lib/uiPresentation";
 import { isPlainObject } from "../../shared/lib/objectUtils";
@@ -15,6 +16,7 @@ type ServerSummaryListProps = {
   mcpPreferences: McpPreferencesMap;
   onToggleServer: (serverId: string, enabled: boolean) => void;
   onToggleTool: (serverId: string, toolName: string, enabled: boolean) => void;
+  onTestConnections?: () => void;
 };
 
 export const ServerSummaryList = ({
@@ -24,11 +26,27 @@ export const ServerSummaryList = ({
   mcpPreferences,
   onToggleServer,
   onToggleTool,
+  onTestConnections,
 }: ServerSummaryListProps) => {
   const [expandedServers, setExpandedServers] = React.useState<Record<string, boolean>>({});
+  const [grantingFor, setGrantingFor] = React.useState<string | null>(null);
 
   const toggleExpand = (serverId: string) =>
     setExpandedServers((prev) => ({ ...prev, [serverId]: !prev[serverId] }));
+
+  const handleGrantPermission = async (url: string) => {
+    try {
+      setGrantingFor(url);
+      const origin = `${new URL(url).origin}/*`;
+      const granted = await chrome.permissions.request({ origins: [origin] });
+      if (granted) {
+        // Re-run test immediately so the UI refreshes with the new permission
+        onTestConnections?.();
+      }
+    } finally {
+      setGrantingFor(null);
+    }
+  };
 
   return (
     <section className="flex h-full flex-col gap-4">
@@ -63,6 +81,7 @@ export const ServerSummaryList = ({
               const hasSecrets = Boolean(entry.hasSecrets);
               const lastCheckedAt =
                 typeof entry.lastCheckedAt === "string" ? entry.lastCheckedAt : "never";
+              const entryUrl = typeof entry.url === "string" ? entry.url : null;
               const health = isPlainObject(healthMap[id]) ? healthMap[id] : null;
               const tools = Array.isArray(toolCatalog[id]) ? toolCatalog[id] : [];
               const errorCategory =
@@ -210,10 +229,27 @@ export const ServerSummaryList = ({
                   {/* ---------- Error ---------- */}
                   {(errorCategory || errorMessage) && serverEnabled ? (
                     <div className="mt-4 rounded-lg border border-destructive/20 bg-destructive/7 p-3 text-sm text-destructive">
-                      <span className="font-semibold">
-                        {errorCategory ? `${formatLabel(errorCategory)}: ` : ""}
-                      </span>
-                      {errorMessage ?? "Connection failed."}
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <span className="font-semibold">
+                            {errorCategory ? `${formatLabel(errorCategory)}: ` : ""}
+                          </span>
+                          {errorMessage ?? "Connection failed."}
+                        </div>
+                        {errorCategory === "permission" && entryUrl && (
+                          <Button
+                            className="shrink-0 h-7 gap-1.5 text-xs border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            disabled={grantingFor === entryUrl}
+                            onClick={() => handleGrantPermission(entryUrl)}
+                            size="sm"
+                            type="button"
+                            variant="outline"
+                          >
+                            <ShieldCheck className="size-3.5" />
+                            {grantingFor === entryUrl ? "Requesting..." : "Grant Permission"}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ) : null}
                 </div>

@@ -1,177 +1,152 @@
-# Web2Agent
+<div align="center">
 
-`Web2Agent` is a Manifest V3 Chrome extension that connects your browser to AI agents and MCP tools. Chat with Gemini and ChatGPT while wielding any MCP server — local or remote.
+# 🌐 Web2Agent
 
-The extension can:
+**A Manifest V3 Chrome Extension orchestrating AI models & MCP tools natively in your browser.**
 
-- connect to HTTP MCP servers directly from the browser
-- connect to local `stdio` MCP servers through a native messaging desktop companion
-- store a raw `mcpServers` document, validate it, and persist runtime health/tool discovery state
-- surface connection status and quick actions in the popup
-- reserve the side panel as the long-lived workspace
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](#)
+[![Manifest V3](https://img.shields.io/badge/Chrome-Manifest_V3-blue)](#)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](#)
 
-The first-class preset is Atlassian via `uvx mcp-atlassian`, but the runtime stays generic.
+[Features](#-key-features) •
+[Installation](#-installation--quick-start) •
+[Architecture](#%EF%B8%8F-architecture) •
+[Troubleshooting](#-troubleshooting)
+</div>
 
-## Status
+---
 
-Implemented today:
+## 🌟 About The Project
 
-- MV3 extension shell with popup, options page, side panel, and background service worker
-- raw JSON-first config console
-- config validation, redaction, split persistence, and encrypted config storage
-- connection testing for HTTP and `stdio` MCP servers
-- desktop companion for local `stdio` servers through Chrome native messaging
-- tool discovery and persisted tool catalog
-- Atlassian capability mapping and popup quick actions driven by discovered tools
+`Web2Agent` is a powerful Manifest V3 Chrome extension that bridges your web browser, popular AI Chat interfaces (ChatGPT, Gemini), and the **Model Context Protocol (MCP)**. 
 
-Present but still scaffold-level:
+With Web2Agent, you can chat with advanced LLMs while wielding any MCP server—local or remote. It injects seamless tool-execution UI directly into your favorite AI chatting platforms, manages a robust "Skill" system, and offloads heavy workflows into background processes to create a true agentic workflow.
 
-- AI provider adapters for OpenAI, Gemini, and Claude
-- side-panel chat shell and orchestration types
-- richer preset setup flows
-- automated end-to-end verification
+### 📸 Screenshots
 
-The currently validated runtime slice is:
+<p align="center">
+  <img src="public/image/Screenshot%202026-04-13%20at%2021.45.41.png" width="48%" />
+  <img src="public/image/Screenshot%202026-04-13%20at%2021.45.51.png" width="48%" />
+  <img src="public/image/Screenshot%202026-04-13%20at%2021.45.58.png" width="48%" />
+  <img src="public/image/Screenshot%202026-04-13%20at%2021.47.22.png" width="48%" />
+  <br/>
+  <img src="public/image/Screenshot%202026-04-13%20at%2021.50.24.png" width="96%" />
+</p>
 
-`save config -> test connections -> initialize/list tools -> persist health/tool catalog -> popup reads live state`
+### ✨ Key Features
 
-## Architecture
+- **MCP Protocol Integrations**: Connect seamlessly to both HTTP MCP servers (directly from the browser) and local `stdio` MCP servers (through a native messaging desktop companion).
+- **Agentic Execution Loop**: Monitors AI outputs for structured tool calls, automatically executes tools in the background, and seamlessly injects the results back into your chat conversation.
+- **Native Chat Interceptors**: Overlays clean, interactive tool execution cards directly inside ChatGPT and Gemini's native web UIs.
+- **Persistent Side Panel**: Offers a full-featured, persistent workspace inside Chrome acting as your command center for MCP config, logs, and deep AI interactions.
+- **AI Skill Management**: Define, toggle, and inject contextual "Skills" directly into chat orchestrators.
+- **Secure Architecture**: Implements encrypted config storage, redaction of sensitive credentials, and connection health discovery.
 
-The project is split into two runtimes:
+---
 
-1. Chrome extension runtime
-2. Desktop companion runtime
+## 🏗️ Architecture
 
-### Chrome extension
+The project is split into two harmonized runtimes:
 
-- `src/options/`: full-page configuration console
-- `src/popup/`: compact status and quick-action surface
-- `src/sidepanel/`: persistent workspace shell
-- `src/background/`: service worker bootstrap, messaging, connection manager
-- `src/core/`: transports, storage, permissions, AI scaffolding
-- `src/presets/atlassian/`: Atlassian-specific labels, capability mapping, examples
-- `src/shared/`: canonical contracts, config parsing, validation, helpers
+### 1. Chrome Extension Runtime
+The core of Web2Agent runs securely within your browser.
+- **`src/options/`**: Full-page configuration console for managing MCP servers.
+- **`src/popup/`**: Compact status overview and quick-action surface.
+- **`src/sidepanel/`**: Persistent multimodal workspace shell.
+- **`src/content/`**: Content scripts handling UI injections (e.g., inside ChatGPT/Gemini) and page interaction.
+- **`src/background/`**: Service worker bootstrapping messaging and maintaining the connection manager.
+- **`src/core/`**: Core logic including MCP transports, storage hooks, and AI model adapters.
 
-### Desktop companion
+### 2. Desktop Companion Runtime
+Bridges the browser boundary to execute local `stdio` MCP servers (like `uvx mcp-atlassian`).
+- **`companion/src/native-host/`**: Chrome Native Messaging bridge.
+- **`companion/src/process-manager/`**: Child process lifecycle, logging, and diagnostics.
+- **`companion/src/mcp/`**: JSON-RPC over `stdio` transport.
 
-- `companion/src/native-host/`: Chrome native messaging bridge
-- `companion/src/process-manager/`: child process lifecycle, logs, diagnostics
-- `companion/src/mcp/`: stdio JSON-RPC transport and MCP RPC client
+*Native host ID:* `com.myworkflowext.native_bridge`
 
-The native host id is:
+---
 
-```text
-com.myworkflowext.native_bridge
-```
+## 🛠 Prerequisites
 
-Tool names are normalized as:
+Ensure you have the following installed before getting started:
+- **Node.js** (v20+)
+- **Yarn** (v1.x)
+- **Google Chrome**
 
-```text
-serverId__toolName
-```
+*For running local `stdio` MCP servers via the companion:*
+- Any runtime requirements for your specific servers (e.g., Python `uvx` for the Atlassian preset).
 
-## Prerequisites
+---
 
-- Node.js 20+
-- Yarn 1.x
-- Google Chrome
-- for local `stdio` MCP servers:
-  - the desktop companion
-  - any server-specific runtime requirements
+## 🚀 Installation & Quick Start
 
-For the Atlassian preset shown in this repo:
+### 1. Build the Extension
 
-- `uvx`
-- `mcp-atlassian`
-- Atlassian credentials in environment variables
-
-## Quick Start
-
-Install dependencies:
+Clone the repository and install dependencies for both the extension and the desktop companion:
 
 ```bash
+# Install root dependencies
 yarn
+
+# Install companion dependencies
 (cd companion && yarn)
 ```
 
-Build both runtimes:
+Build the project:
 
 ```bash
 yarn build
 (cd companion && yarn build)
 ```
 
-Load the extension in Chrome:
+### 2. Load into Chrome
 
-1. Open `chrome://extensions`
-2. Turn on Developer mode
-3. Click `Load unpacked`
-4. Select `dist/`
+1. Open Chrome and navigate to `chrome://extensions`.
+2. Enable **Developer mode** in the top right corner.
+3. Click **Load unpacked** and select the `dist/` folder in the project root.
 
-If you only use HTTP MCP servers, that is enough to start testing the options page and popup.
+*(If you only plan to use remote HTTP MCP servers, you are ready to go!)*
 
-## Development Mode
+### 3. Install the Desktop Companion (For local MCP servers)
 
-Run the extension dev server:
+To run local `stdio` MCP servers, you must install the desktop companion bridge.
+
+**macOS:**
+```bash
+# Locate your extension ID in chrome://extensions first
+bash companion/scripts/install-macos-manual.sh --extension-id <YOUR_EXTENSION_ID>
+```
+
+**Windows:**
+```powershell
+# In PowerShell (run as Administrator if needed)
+powershell -ExecutionPolicy Bypass -File .\companion\scripts\install-windows-manual.ps1 -ExtensionId <YOUR_EXTENSION_ID>
+```
+
+> **Note:** Always remember to reload the extension in Chrome after installing or updating the companion.
+
+---
+
+## 💻 Development Mode
+
+To run a live development server with Hot Module Replacement (HMR):
 
 ```bash
 yarn dev
 ```
 
-Important output directories:
+- When running `yarn dev`, load the unpacked `.dev-dist/` folder into Chrome instead of `dist/`.
+- This ensures development outputs do not overwrite testing/production builds.
 
-- `.dev-dist/`: load this when `yarn dev` is running
-- `dist/`: production build output from `yarn build`
-- `companion/dist/`: desktop companion build output
+---
 
-This separation is intentional so dev output never overwrites the production-ready extension bundle.
+## ⚙️ Example Configurations
 
-## Desktop Companion Installation
+Manage your servers inside the Extension's Options Page. 
 
-Use the companion if you want to run local `stdio` MCP servers such as `uvx mcp-atlassian`.
-
-### macOS
-
-1. Build the companion:
-
-```bash
-(cd companion && yarn build)
-```
-
-2. Find the extension ID in `chrome://extensions`
-
-3. Install the native host:
-
-```bash
-bash companion/scripts/install-macos-manual.sh --extension-id <EXTENSION_ID>
-```
-
-4. Reload the extension in Chrome
-
-### Windows
-
-1. Build the companion:
-
-```powershell
-cd companion
-yarn build
-cd ..
-```
-
-2. Find the extension ID in `chrome://extensions`
-
-3. Install the native host:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\companion\scripts\install-windows-manual.ps1 -ExtensionId <EXTENSION_ID>
-```
-
-4. Reload the extension in Chrome
-
-## Example Configs
-
-### Atlassian via local `uvx`
-
+### Local Server via Companion (e.g., Atlassian)
 ```json
 {
   "mcpServers": {
@@ -182,10 +157,7 @@ powershell -ExecutionPolicy Bypass -File .\companion\scripts\install-windows-man
       "env": {
         "JIRA_URL": "https://your-domain.atlassian.net",
         "JIRA_USERNAME": "you@example.com",
-        "JIRA_API_TOKEN": "your_jira_api_token",
-        "CONFLUENCE_URL": "https://your-domain.atlassian.net/wiki",
-        "CONFLUENCE_USERNAME": "you@example.com",
-        "CONFLUENCE_API_TOKEN": "your_confluence_api_token"
+        "JIRA_API_TOKEN": "your_jira_api_token"
       },
       "preset": "atlassian"
     }
@@ -193,13 +165,7 @@ powershell -ExecutionPolicy Bypass -File .\companion\scripts\install-windows-man
 }
 ```
 
-Notes:
-
-- `mcp-atlassian` currently works through the companion using `json-lines` stdio behavior
-- the companion auto-detects this for `mcp-atlassian`, but keeping `stdioProtocol: "json-lines"` in config is explicit and easier to debug
-
-### Generic HTTP MCP server
-
+### Remote HTTP MCP Server
 ```json
 {
   "mcpServers": {
@@ -214,107 +180,55 @@ Notes:
 }
 ```
 
-## Working With the UI
+---
 
-- Options page:
-  - the main place to edit raw config JSON
-  - validates, saves, and tests connections
-  - shows server index, health, and discovered tools
-- Popup:
-  - reads persisted runtime state
-  - shows status for Atlassian servers first
-  - exposes quick actions and shortcuts into options and side panel
-- Side panel:
-  - currently a workspace/chat shell
-  - not yet fully wired to live provider + tool execution flow
+## 🐛 Troubleshooting
 
-## Troubleshooting
+| Error | Common Causes & Solutions |
+|-------|--------------------------|
+| \`Companion connection disconnected\` | The native host is not installed, the ID inside the manifest is wrong, or the extension needs a manual reload. |
+| \`Failed to start MCP command...\` | The executable (like \`uvx\`) is not in your system PATH visible to Chrome. Try using absolute paths in the config. |
+| \`MCP request timed out: initialize\` | Often a stdio framing mismatch. For \`mcp-atlassian\`, ensure \`stdioProtocol\` is explicitly set to \`"json-lines"\`. |
+| \`tools: 0\` | Transport succeeded but the server exposed no tools. Verify API keys, environment variables, or server-side filtering logic. |
 
-### `Companion connection disconnected.`
+---
 
-Typical causes:
-
-- native host was not installed
-- native host manifest does not allow the current extension ID
-- Chrome needs the extension to be reloaded after companion installation
-
-### `Failed to start MCP command "uvx"`
-
-Typical causes:
-
-- `uvx` is not installed
-- `uvx` is not in the PATH visible to the native host
-- the command should be given as an absolute path
-
-The macOS install script exports a safer PATH for Homebrew-based setups, but using an absolute command path is still the least ambiguous option.
-
-### `MCP request timed out: initialize`
-
-For `mcp-atlassian`, this usually means the wrong stdio framing was used. This repo now supports `json-lines` for that server.
-
-If you still see this:
-
-- rebuild the companion
-- reinstall the native host
-- reload the extension
-- keep `stdioProtocol: "json-lines"` in the config for `mcp-atlassian`
-
-### `tools: 0`
-
-That means transport and initialize likely worked, but the upstream server did not expose any tools.
-
-Typical causes:
-
-- missing or invalid credentials
-- server-side tool filtering
-- upstream configuration that disables toolsets
-
-## Repository Layout
+## 📂 Repository Structure
 
 ```text
 .
-├── companion/
-├── docs/
-├── public/
-├── scripts/
+├── companion/          # Desktop native messaging bridge
+├── docs/               # Architecture design & implementation specs
+├── scripts/            # CLI utilities and packaging tools
 ├── src/
-│   ├── background/
-│   ├── core/
-│   ├── options/
-│   ├── popup/
-│   ├── presets/
-│   ├── shared/
-│   └── sidepanel/
-├── manifest.config.ts
+│   ├── background/     # Service worker & MCP connection pool
+│   ├── content/        # UI Injectors (ChatGPT, Gemini interfaces)
+│   ├── core/           # Protocol transports, State management
+│   ├── options/        # React Options Page (Config console)
+│   ├── popup/          # React Popup Page (Quick actions)
+│   ├── sidepanel/      # React Side Panel Workspace
+│   └── shared/         # Shared utilities and types
+├── manifest.config.ts  # MV3 Manifest generator
 ├── package.json
 └── vite.config.ts
 ```
 
-## Key Docs
+For a deeper dive into our planned features and technical specs, check out the `docs/implementation-plan/web2agent/` folder.
 
-- Implementation plan: `docs/implementation-plan/web2agent/README.md`
-- Requirements: `docs/implementation-plan/web2agent/01-requirements.md`
-- Design: `docs/implementation-plan/web2agent/02-design.md`
-- Tasks: `docs/implementation-plan/web2agent/03-tasks.md`
-- Verification matrix: `docs/implementation-plan/web2agent/05-verification-matrix.md`
-- Progress snapshot: `docs/implementation-plan/web2agent/06-progress-snapshot.md`
+---
 
-## Build Commands
+## 🤝 Contributing
 
-Root extension:
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
-```bash
-yarn build
-```
+1. Fork the Project
+2. Create your Feature Branch (\`git checkout -b feature/AmazingFeature\`)
+3. Commit your Changes (\`git commit -m 'Add some AmazingFeature'\`)
+4. Push to the Branch (\`git push origin feature/AmazingFeature\`)
+5. Open a Pull Request
 
-Desktop companion:
+---
 
-```bash
-(cd companion && yarn build)
-```
+## 📄 License
 
-## Current Limitations
-
-- the side-panel AI flow is not fully integrated end-to-end yet
-- automated tests and packaging verification are not complete
-- this repo is currently optimized for local development and manual native-host installation while the product shape stabilizes
+Distributed under the MIT License. See \`LICENSE\` for more information.

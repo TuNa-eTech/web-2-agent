@@ -22,7 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSkills } from "../../shared/hooks/useSkills";
 import { SkillCard } from "./SkillCard";
 import { SkillEditor } from "./SkillEditor";
-import type { SkillContent, SkillReference } from "../../core/skills/types";
+import type { SkillContent, SkillReference, SkillInjection } from "../../core/skills/types";
 
 export const SkillsPanel = () => {
   const {
@@ -43,6 +43,8 @@ export const SkillsPanel = () => {
   const [editInitial, setEditInitial] = React.useState<{
     name: string;
     description: string;
+    injection: SkillInjection;
+    tags: string[];
     content: SkillContent;
   } | null>(null);
   const [budgetInput, setBudgetInput] = React.useState(String(tokenBudget));
@@ -56,9 +58,11 @@ export const SkillsPanel = () => {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const enabledCount = skills.filter((s) => s.enabled).length;
-  const enabledTokens = skills
-    .filter((s) => s.enabled)
+  const enabledSkills = skills.filter((s) => s.enabled);
+  const alwaysCount = enabledSkills.filter((s) => s.injection === "always").length;
+  const autoCount = enabledSkills.filter((s) => s.injection === "auto").length;
+  const alwaysTokens = enabledSkills
+    .filter((s) => s.injection === "always")
     .reduce((sum, s) => sum + s.totalTokenEstimate, 0);
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -90,6 +94,8 @@ export const SkillsPanel = () => {
     setEditInitial({
       name: meta.name,
       description: meta.description,
+      injection: meta.injection ?? "always",
+      tags: meta.tags ?? [],
       content,
     });
     setEditorOpen(true);
@@ -100,11 +106,13 @@ export const SkillsPanel = () => {
     description: string;
     coreContent: string;
     references: Omit<SkillReference, "id" | "tokenEstimate">[];
+    injection: SkillInjection;
+    tags: string[];
   }) => {
     if (editingId) {
       await update(editingId, data);
     } else {
-      await create(data.name, data.description, data.coreContent, data.references);
+      await create(data.name, data.description, data.coreContent, data.references, data.injection, data.tags);
     }
     setEditingId(null);
     setEditInitial(null);
@@ -157,10 +165,15 @@ export const SkillsPanel = () => {
       {/* Summary bar */}
       <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
         <Badge variant="secondary" className="text-[10px]">
-          {enabledCount} enabled
+          {alwaysCount} always
         </Badge>
+        {autoCount > 0 && (
+          <Badge variant="outline" className="text-[10px]">
+            {autoCount} auto
+          </Badge>
+        )}
         <span className="text-xs text-muted-foreground">
-          ~{enabledTokens.toLocaleString()} / {tokenBudget.toLocaleString()} token budget
+          ~{alwaysTokens.toLocaleString()} fixed + auto / {tokenBudget.toLocaleString()} budget
         </span>
         <div className="ml-auto flex items-center gap-2">
           <Label htmlFor="token-budget" className="text-[10px] text-muted-foreground">

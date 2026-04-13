@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 
 import type { BrokerTool, ToolCatalog } from "../shared/types";
-import type { SkillMeta, SkillIndex } from "../core/skills/types";
+import type { SkillMeta, SkillIndex, SkillContent } from "../core/skills/types";
 import { STORAGE_KEYS } from "../core/storage/storageKeys";
 
 // ---------------------------------------------------------------------------
@@ -18,7 +18,10 @@ export type ToolbarTool = Pick<
 export type ToolbarSkill = Pick<
   SkillMeta,
   "id" | "name" | "description" | "enabled" | "injection" | "tags"
->;
+> & {
+  /** Full core content to inject into the AI context. Loaded from skillContent storage. */
+  coreContent?: string;
+};
 
 export type ToolbarData = {
   tools: ToolbarTool[];
@@ -61,7 +64,27 @@ export const loadToolbarData = async (): Promise<ToolbarData> => {
         }))
     : [];
 
-  const skills: ToolbarSkill[] = rawSkillIndex?.skills ?? [];
+  const skillMetas: SkillMeta[] = rawSkillIndex?.skills ?? [];
+
+  // Load full coreContent for each skill so it can be injected into the context prompt.
+  const skills: ToolbarSkill[] = await Promise.all(
+    skillMetas.map(async (s) => {
+      let coreContent: string | undefined;
+      if (s.enabled) {
+        const content = await getItem<SkillContent>(STORAGE_KEYS.skillContent(s.id));
+        coreContent = content?.coreContent ?? undefined;
+      }
+      return {
+        id: s.id,
+        name: s.name,
+        description: s.description,
+        enabled: s.enabled,
+        injection: s.injection,
+        tags: s.tags,
+        coreContent,
+      };
+    })
+  );
 
   return { tools, skills };
 };
@@ -164,7 +187,7 @@ const renderToolsSection = (tools: ToolbarTool[]): string => {
     lines.push(`### Server: ${serverId}`);
     for (const t of serverTools) {
       const risk = t.risk === "write" ? " ⚠️ write" : "";
-      lines.push(`- **${t.originalName}**${risk}: ${t.description || "No description"}`);
+      lines.push(`- **${t.namespacedName}**${risk}: ${t.description || "No description"}`);
     }
     lines.push("");
   }
@@ -177,9 +200,21 @@ const renderSkillsSection = (skills: ToolbarSkill[]): string => {
   if (active.length === 0) return "_No skills active._";
 
   const lines: string[] = ["## Active Skills\n"];
+  lines.push("The following skills contain rules and guidelines you MUST follow precisely in this conversation:\n");
   for (const s of active) {
-    lines.push(`- **${s.name}**: ${s.description || "No description"}`);
+    lines.push(`---`);
+    lines.push(`### Skill: ${s.name}`);
+    if (s.description) lines.push(`> ${s.description}\n`);
+    if (s.coreContent) {
+      // Inject the full content so the AI sees the actual rules
+      lines.push(s.coreContent);
+    } else {
+      lines.push(`_(No detailed content available for this skill)_`);
+    }
+    lines.push("");
   }
+  lines.push("---");
+  lines.push("\n> **You MUST read and strictly follow all rules in the skills above for the entire conversation.**");
   return lines.join("\n");
 };
 

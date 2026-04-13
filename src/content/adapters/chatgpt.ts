@@ -3,6 +3,7 @@
 // ---------------------------------------------------------------------------
 
 import type { PlatformAdapter } from "./types";
+import { delay } from "../utils";
 
 const SELECTORS = {
   // ChatGPT uses a ProseMirror or plain <textarea>
@@ -11,15 +12,6 @@ const SELECTORS = {
     '.ProseMirror[contenteditable="true"]',
     'textarea[data-id="root"]',
     "textarea",
-  ],
-  // Container near the send/attach buttons
-  insertionContainer: [
-    // ChatGPT's composer bottom toolbar
-    ".flex.items-end.gap-1\\.5",
-    ".flex.items-end",
-    ".composer-actions",
-    // Fallback: the parent of the send button
-    'button[data-testid="send-button"]',
   ],
 } as const;
 
@@ -32,20 +24,28 @@ const queryFirst = (selectors: readonly string[]): HTMLElement | null => {
 };
 
 /**
- * For send-button fallback: return its parent container instead
- * so we can inject siblings next to it.
+ * Find the outer composer form element.
+ * We insert the toolbar as a sibling BEFORE this element (above the input box).
  */
-const findContainer = (): HTMLElement | null => {
-  for (const sel of SELECTORS.insertionContainer) {
-    const el = document.querySelector<HTMLElement>(sel);
-    if (!el) continue;
-    // If we matched a button, use its parent
-    if (el.tagName === "BUTTON" && el.parentElement) {
-      return el.parentElement;
+const findComposerForm = (): HTMLElement | null => {
+  // Prefer the form that wraps the chat input
+  const textarea = queryFirst([
+    "#prompt-textarea",
+    '.ProseMirror[contenteditable="true"]',
+    "textarea",
+  ]);
+  if (textarea) {
+    // Walk up to find the enclosing <form>
+    let el: HTMLElement | null = textarea;
+    while (el && el !== document.body) {
+      if (el.tagName === "FORM") return el;
+      el = el.parentElement;
     }
-    return el;
+    // Fallback: return the textarea's grandparent container
+    return textarea.parentElement?.parentElement ?? textarea.parentElement ?? null;
   }
-  return null;
+  // Last resort: any form on the page
+  return document.querySelector<HTMLElement>("form");
 };
 
 export const createChatGPTAdapter = (): PlatformAdapter => ({
@@ -69,7 +69,7 @@ export const createChatGPTAdapter = (): PlatformAdapter => ({
   },
 
   findInsertionPoint(): HTMLElement | null {
-    return findContainer();
+    return findComposerForm();
   },
 
   getInputElement(): HTMLElement | null {
@@ -104,5 +104,70 @@ export const createChatGPTAdapter = (): PlatformAdapter => ({
     }
 
     input.focus();
+  },
+
+  async injectFile(content: string, filename: string): Promise<boolean> {
+    const file = new File([content], filename, { type: "text/plain" });
+    const dt = new DataTransfer();
+    dt.items.add(file);
+
+    const textarea = document.querySelector<HTMLElement>("#prompt-textarea") ??
+                     document.querySelector<HTMLElement>('.ProseMirror[contenteditable="true"]');
+
+    // ---------------------------------------------------------------------------
+    // Strategy 1: Synthetic Paste Event
+    // ChatGPT's editor listens for paste events to attach files
+    // ---------------------------------------------------------------------------
+    if (textarea) {
+      const dtPaste = new DataTransfer();
+      dtPaste.items.add(file);
+      
+      const pasteEvent = new ClipboardEvent("paste", {
+        clipboardData: dtPaste,
+        bubbles: true,
+        cancelable: true
+      });
+      
+      textarea.focus();
+      textarea.dispatchEvent(pasteEvent);
+      await delay(400);
+
+      const accepted = !!(
+        document.querySelector('[data-testid*="file"]') ??
+        document.querySelector(".upload-preview") ??
+        document.querySelector('[class*="attachment"]') ??
+        document.querySelector('[class*="file-upload"]')
+      );
+      if (accepted) return true;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Strategy 2: Fallback — Drag and Drop
+    // ---------------------------------------------------------------------------
+    const dropZone: HTMLElement | null =
+      document.querySelector('[data-testid="composer-background"]') ??
+      (textarea?.closest("form") as HTMLElement | null) ??
+      document.querySelector("form");
+
+    if (dropZone) {
+      const opts: DragEventInit = { dataTransfer: dt, bubbles: true, cancelable: true };
+      dropZone.dispatchEvent(new DragEvent("dragenter", opts));
+      await delay(30);
+      dropZone.dispatchEvent(new DragEvent("dragover", opts));
+      await delay(30);
+      dropZone.dispatchEvent(new DragEvent("drop", opts));
+
+      await delay(400);
+
+      const accepted = !!(
+        document.querySelector('[data-testid*="file"]') ??
+        document.querySelector(".upload-preview") ??
+        document.querySelector('[class*="attachment"]') ??
+        document.querySelector('[class*="file-upload"]')
+      );
+      if (accepted) return true;
+    }
+
+    return false;
   },
 });

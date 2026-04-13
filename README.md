@@ -1,6 +1,6 @@
-# MCP First Extension
+# Web2Agent
 
-`MCP First Extension` is a Manifest V3 Chrome extension shell that treats MCP servers as the primary integration surface.
+`Web2Agent` is a Manifest V3 Chrome extension that connects your browser to AI agents and MCP tools. Chat with Gemini and ChatGPT while wielding any MCP server — local or remote.
 
 The extension can:
 
@@ -292,12 +292,12 @@ Typical causes:
 
 ## Key Docs
 
-- Implementation plan: `docs/implementation-plan/mcp-first-extension/README.md`
-- Requirements: `docs/implementation-plan/mcp-first-extension/01-requirements.md`
-- Design: `docs/implementation-plan/mcp-first-extension/02-design.md`
-- Tasks: `docs/implementation-plan/mcp-first-extension/03-tasks.md`
-- Verification matrix: `docs/implementation-plan/mcp-first-extension/05-verification-matrix.md`
-- Progress snapshot: `docs/implementation-plan/mcp-first-extension/06-progress-snapshot.md`
+- Implementation plan: `docs/implementation-plan/web2agent/README.md`
+- Requirements: `docs/implementation-plan/web2agent/01-requirements.md`
+- Design: `docs/implementation-plan/web2agent/02-design.md`
+- Tasks: `docs/implementation-plan/web2agent/03-tasks.md`
+- Verification matrix: `docs/implementation-plan/web2agent/05-verification-matrix.md`
+- Progress snapshot: `docs/implementation-plan/web2agent/06-progress-snapshot.md`
 
 ## Build Commands
 

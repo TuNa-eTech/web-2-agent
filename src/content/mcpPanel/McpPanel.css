@@ -1,0 +1,394 @@
+/* ---------------------------------------------------------------------------
+   MCP Floating Panel — injected into its own Shadow DOM
+   The :host element itself has pointer-events:none so it doesn't block the page.
+   Only the visible UI elements re-enable pointer events.
+--------------------------------------------------------------------------- */
+
+:host {
+  all: initial;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #202124;
+  pointer-events: none;
+}
+
+/* ── Layout root ── */
+.mcp-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 16px;
+}
+
+/* ── Collapsed badge ── */
+.mcp-panel__badge {
+  pointer-events: auto;
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #1a73e8;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4), 0 2px 6px rgba(0,0,0,0.15);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mcp-panel__badge:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 16px rgba(26, 115, 232, 0.5), 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.mcp-panel__badge-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ea4335;
+  color: #fff;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  min-width: 16px;
+  text-align: center;
+  line-height: 16px;
+  height: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* ── Expanded panel body ── */
+.mcp-panel__body {
+  pointer-events: auto;
+  width: 320px;
+  max-height: calc(100vh - 32px);
+  height: calc(100vh - 32px); /* Makes it full height when opened */
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Footer ── */
+.mcp-panel__footer {
+  padding: 10px 12px;
+  background: #f8f9fa;
+  border-top: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+/* ── Header ── */
+.mcp-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.mcp-panel__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #3c4043;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.mcp-panel__title-icon {
+  font-size: 14px;
+}
+
+/* Auto-execute toggle */
+.mcp-panel__auto-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #5f6368;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.mcp-panel__auto-label input[type="checkbox"] {
+  accent-color: #1a73e8;
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
+}
+
+.mcp-panel__collapse-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid #dadce0;
+  background: transparent;
+  color: #5f6368;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 300;
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.1s;
+}
+
+.mcp-panel__collapse-btn:hover {
+  background: #e8eaed;
+  color: #202124;
+}
+
+/* ── Scrollable content area ── */
+.mcp-panel__content {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* ── Section ── */
+.mcp-panel__section {
+  padding: 8px 0;
+}
+
+.mcp-panel__section + .mcp-panel__section {
+  border-top: 1px solid #f1f3f4;
+}
+
+.mcp-panel__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 12px 6px;
+}
+
+.mcp-panel__section-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #80868b;
+}
+
+.mcp-panel__clear-btn {
+  font-size: 10px;
+  color: #1a73e8;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.mcp-panel__clear-btn:hover {
+  text-decoration: underline;
+}
+
+/* ── Empty state ── */
+.mcp-panel__empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: #9aa0a6;
+  font-size: 12px;
+}
+
+.mcp-panel__empty-icon {
+  font-size: 28px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+/* ── Tool call card ── */
+.mcp-tool-card {
+  margin: 0 10px 6px;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.mcp-tool-card--pending {
+  border-color: #fbbc04;
+  background: #fffde7;
+}
+
+.mcp-tool-card--running {
+  border-color: #1a73e8;
+  background: #e8f0fe;
+}
+
+.mcp-tool-card--done {
+  border-color: #34a853;
+  background: #e6f4ea;
+}
+
+.mcp-tool-card--denied {
+  border-color: #dadce0;
+  background: #f8f9fa;
+  opacity: 0.7;
+}
+
+.mcp-tool-card--error {
+  border-color: #ea4335;
+  background: #fce8e6;
+}
+
+.mcp-tool-card__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 6px;
+}
+
+.mcp-tool-card__status-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.mcp-tool-card__name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #202124;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mcp-tool-card__status-text {
+  font-size: 10px;
+  color: #5f6368;
+  flex-shrink: 0;
+}
+
+/* Args */
+.mcp-tool-card__args {
+  padding: 0 10px 6px;
+}
+
+.mcp-tool-card__args-grid {
+  background: rgba(0,0,0,0.04);
+  border-radius: 6px;
+  padding: 5px 8px;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.mcp-tool-card__arg-row {
+  display: flex;
+  gap: 4px;
+  font-size: 11px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+.mcp-tool-card__arg-key {
+  color: #5f6368;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.mcp-tool-card__arg-val {
+  color: #202124;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* Result */
+.mcp-tool-card__result {
+  padding: 4px 10px 8px;
+  font-size: 11px;
+  color: #137333;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.mcp-tool-card__error {
+  padding: 4px 10px 8px;
+  font-size: 11px;
+  color: #c5221f;
+  word-break: break-word;
+}
+
+/* Actions */
+.mcp-tool-card__actions {
+  display: flex;
+  gap: 6px;
+  padding: 0 10px 8px;
+}
+
+.mcp-tool-card__btn {
+  flex: 1;
+  height: 28px;
+  border-radius: 14px;
+  border: 1px solid;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: opacity 0.1s, background 0.1s;
+}
+
+.mcp-tool-card__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.mcp-tool-card__btn--allow {
+  background: #1a73e8;
+  border-color: #1a73e8;
+  color: #fff;
+}
+
+.mcp-tool-card__btn--allow:hover:not(:disabled) {
+  background: #1558b0;
+  border-color: #1558b0;
+}
+
+.mcp-tool-card__btn--deny {
+  background: transparent;
+  border-color: #dadce0;
+  color: #5f6368;
+}
+
+.mcp-tool-card__btn--deny:hover:not(:disabled) {
+  background: #f1f3f4;
+}
+
+/* ── Spinner ── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.mcp-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}

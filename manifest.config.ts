@@ -5,10 +5,10 @@ const EXTENSION_PUBLIC_KEY =
 
 export default defineManifest({
   manifest_version: 3,
-  name: "MCP First Extension",
+  name: "Web2Agent",
   version: "0.0.0",
   key: EXTENSION_PUBLIC_KEY,
-  description: "MCP-first Chrome extension shell.",
+  description: "Connect your browser to AI agents and MCP tools. Chat with Gemini and ChatGPT while wielding any MCP server — local or remote.",
   action: {},
   side_panel: {
     default_path: "src/sidepanel/index.html"

@@ -17,12 +17,14 @@ import { SkillDropdown } from "./SkillDropdown";
 type Props = {
   platform: Platform;
   onInsertText: (text: string) => void;
+  /** Try injecting context as a file attachment; returns which path was used. */
+  onInjectContext?: (content: string) => Promise<"file" | "text">;
 };
 
-export const Toolbar: React.FC<Props> = ({ platform, onInsertText }) => {
+export const Toolbar: React.FC<Props> = ({ platform, onInsertText, onInjectContext }) => {
   const [data, setData] = useState<ToolbarData>({ tools: [], skills: [] });
   const [activeDropdown, setActiveDropdown] = useState<"tools" | "skills" | null>(null);
-  const [contextInjected, setContextInjected] = useState(false);
+  const [injectResult, setInjectResult] = useState<"file" | "text" | null>(null);
 
   // Load initial data + subscribe to changes
   useEffect(() => {
@@ -53,10 +55,12 @@ export const Toolbar: React.FC<Props> = ({ platform, onInsertText }) => {
 
   const handleInjectContext = useCallback(async () => {
     const prompt = await buildContextPrompt(data);
-    onInsertText(prompt);
-    setContextInjected(true);
-    setTimeout(() => setContextInjected(false), 3000);
-  }, [data, onInsertText]);
+    const result = onInjectContext
+      ? await onInjectContext(prompt)
+      : (onInsertText(prompt), "text" as const);
+    setInjectResult(result);
+    setTimeout(() => setInjectResult(null), 3000);
+  }, [data, onInsertText, onInjectContext]);
 
   const closeDropdown = useCallback(() => setActiveDropdown(null), []);
 
@@ -64,18 +68,28 @@ export const Toolbar: React.FC<Props> = ({ platform, onInsertText }) => {
   const activeSkillCount = data.skills.filter((s) => s.enabled).length;
   const hasAnything = toolCount > 0 || data.skills.length > 0;
 
+  const injectIcon = injectResult === "file" ? "📎" : injectResult === "text" ? "📋" : "📋";
+  const injectLabel =
+    injectResult === "file" ? "File attached" :
+    injectResult === "text" ? "Text injected" :
+    "Inject Context";
+  const injectTitle =
+    injectResult === "file" ? "Context attached as mcp-context.md" :
+    injectResult === "text" ? "Context inserted as text (file upload not supported)" :
+    "Insert tool & skill descriptions into the chat";
+
   return (
     <div className={`toolbar toolbar--${platform}`}>
       {/* Inject Context */}
       {hasAnything && (
         <button
-          className={`toolbar-btn ${contextInjected ? "toolbar-btn--done" : "toolbar-btn--primary"}`}
+          className={`toolbar-btn ${injectResult ? "toolbar-btn--done" : "toolbar-btn--primary"}`}
           onClick={handleInjectContext}
-          title="Insert tool & skill descriptions into the chat"
-          disabled={contextInjected}
+          title={injectTitle}
+          disabled={!!injectResult}
         >
-          <span className="icon">{contextInjected ? "✅" : "📋"}</span>
-          <span>{contextInjected ? "Injected" : "Inject Context"}</span>
+          <span className="icon">{injectResult ? (injectResult === "file" ? "📎" : "✅") : injectIcon}</span>
+          <span>{injectLabel}</span>
         </button>
       )}
 

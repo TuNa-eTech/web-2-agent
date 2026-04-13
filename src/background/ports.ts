@@ -193,10 +193,12 @@ export const registerPortRouter = () => {
               providerId: payload.providerId,
               model: payload.model,
               userMessage: payload.message,
+              attachments: payload.attachments,
               history: (payload.history ?? []).map((m, i) => ({
                 id: m.id,
                 role: m.role as "user" | "assistant",
                 content: m.content,
+                attachments: m.attachments,
                 createdAt: new Date(Date.now() - (payload.history.length - i) * 1000).toISOString(),
               })),
               tools: availableTools,

@@ -36,6 +36,7 @@ export type ChatMessage = {
   toolName?: string;      // for role:"tool" — tool function name
   /** Set on role:"assistant" messages that issued tool calls */
   toolCalls?: Array<{ id: string; name: string; arguments: unknown }>;
+  attachments?: Array<{ data: string; mimeType: string; name: string }>;
   metadata?: Record<string, unknown>;
 };
 

@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Vite Dev Server (Chrome Extension)",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["dev"],
+      "port": 5173
+    },
+    {
+      "name": "Vite Preview",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["preview"],
+      "port": 4173
+    }
+  ]
+}

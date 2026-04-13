@@ -9,6 +9,7 @@ export type StoredMessage = {
   id: string;
   role: "user" | "assistant";
   content: string;
+  attachments?: Array<{ data: string; mimeType: string; name: string }>;
 };
 
 export type ConversationMeta = {

@@ -34,7 +34,8 @@ export type SidepanelToBackgroundPortMessage =
       model: string;
       providerId: ProviderId;
       conversationId: string;
-      history: Array<{ id: string; role: "user" | "assistant"; content: string }>;
+      history: Array<{ id: string; role: "user" | "assistant"; content: string; attachments?: Array<{ data: string; mimeType: string; name: string }> }>;
+      attachments?: Array<{ data: string; mimeType: string; name: string }>;
     }
   | {
       type: "chat/cancel";

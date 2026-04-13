@@ -9,7 +9,8 @@ import type {
 } from "../provider-types";
 
 export type OpenAiMessage =
-  | { role: "system" | "user"; content: string }
+  | { role: "system"; content: string }
+  | { role: "user"; content: string | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }> }
   | { role: "assistant"; content: string | null; tool_calls?: Array<{ id: string; type: "function"; function: { name: string; arguments: string } }> }
   | { role: "tool"; content: string; tool_call_id: string };
 
@@ -85,6 +86,23 @@ const toOpenAiMessage = (message: ChatMessage): OpenAiMessage => {
       content: typeof message.content === "string" ? message.content : JSON.stringify(message.content),
       tool_call_id: message.toolCallId ?? "",
     };
+  }
+
+  if (message.role === "user" && message.attachments && message.attachments.length > 0) {
+    const parts: Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }> = [];
+    if (message.content) {
+      parts.push({ type: "text", text: message.content });
+    }
+    for (const att of message.attachments) {
+      if (att.mimeType.startsWith("image/")) {
+        const b64Data = att.data.includes("base64,") ? att.data : `data:${att.mimeType};base64,${att.data}`;
+        parts.push({ type: "image_url", image_url: { url: b64Data } });
+      }
+    }
+    if (parts.length === 0) {
+      parts.push({ type: "text", text: "" });
+    }
+    return { role: "user", content: parts };
   }
 
   // Regular system/user/assistant

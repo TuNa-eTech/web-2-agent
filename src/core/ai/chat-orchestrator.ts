@@ -16,6 +16,7 @@ export type StartTurnInput = {
   providerId: ProviderId;
   model: string;
   userMessage: string;
+  attachments?: Array<{ data: string; mimeType: string; name: string }>;
   history: ChatMessage[];
   tools: NormalizedToolDefinition[];
   systemPrompt?: string;

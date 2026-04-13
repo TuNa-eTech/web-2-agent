@@ -10,6 +10,7 @@ import type {
 
 export type GeminiPart =
   | { text: string }
+  | { inlineData: { mimeType: string; data: string } }
   | { functionCall: { name: string; args: Record<string, unknown> } }
   | { functionResponse: { name: string; response: unknown } };
 
@@ -32,7 +33,7 @@ export type GeminiRequest = {
   model: string;
   contents: GeminiContent[];
   tools?: GeminiToolDefinition[];
-  systemPrompt?: string;
+  systemInstruction?: { role: "system"; parts: Array<{ text: string }> };
   generationConfig?: {
     temperature?: number;
   };
@@ -95,8 +96,53 @@ const toGeminiContent = (message: ChatMessage): GeminiContent => {
     };
   }
 
-  return { role: "user", parts: [{ text: message.content }] };
+  const parts: GeminiPart[] = [];
+  if (message.content) {
+    parts.push({ text: message.content });
+  }
+  if (message.attachments) {
+    for (const att of message.attachments) {
+      const b64Data = att.data.includes("base64,") ? att.data.split("base64,")[1] : att.data;
+      parts.push({ inlineData: { mimeType: att.mimeType, data: b64Data } });
+    }
+  }
+  if (parts.length === 0) {
+    parts.push({ text: "" });
+  }
+  return { role: "user", parts };
 };
+
+/** JSON Schema keywords that the Gemini API does not support. */
+const UNSUPPORTED_SCHEMA_KEYS = new Set([
+  "additionalProperties",
+  "$schema",
+  "$id",
+  "$ref",
+  "$comment",
+  "$defs",
+  "default",
+  "examples",
+  "title",
+  "patternProperties",
+  "if",
+  "then",
+  "else",
+  "allOf",
+  "anyOf",
+  "oneOf",
+  "not",
+  "minLength",
+  "maxLength",
+  "minimum",
+  "maximum",
+  "exclusiveMinimum",
+  "exclusiveMaximum",
+  "multipleOf",
+  "pattern",
+  "minItems",
+  "maxItems",
+  "uniqueItems",
+]);
 
 const sanitizeGeminiSchema = (schema: unknown): unknown => {
   if (typeof schema !== "object" || schema === null) return schema;
@@ -106,7 +152,7 @@ const sanitizeGeminiSchema = (schema: unknown): unknown => {
 
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(schema)) {
-    if (key === "additionalProperties" || key === "$schema") {
+    if (UNSUPPORTED_SCHEMA_KEYS.has(key)) {
       continue;
     }
     result[key] = sanitizeGeminiSchema(value);
@@ -122,12 +168,14 @@ const toGeminiTool = (
   parameters: sanitizeGeminiSchema(tool.inputSchema ?? {}),
 });
 
+let toolCallCounter = 0;
+
 const toToolCall = (call: {
   functionCall?: { name: string; args: Record<string, unknown> };
 }): NormalizedToolCall | null => {
   if (!call.functionCall) return null;
   return {
-    id: `gemini-${call.functionCall.name}`,
+    id: `gemini-${call.functionCall.name}-${++toolCallCounter}-${Date.now().toString(36)}`,
     name: call.functionCall.name,
     arguments: call.functionCall.args ?? {},
   };
@@ -178,26 +226,24 @@ export const GeminiAdapter: ProviderAdapter<
 > = {
   id: "gemini",
   displayName: "Gemini",
-  buildRequest: (context: ProviderRequestContext): GeminiRequest => {
+  buildRequest(context: ProviderRequestContext): GeminiRequest {
     const contents = context.messages.map((message) => toGeminiContent(message));
-
-    const tools = context.tools.length
-      ? [{ functionDeclarations: context.tools.map(toGeminiTool) }]
-      : [];
+    const tools = this.mapTools(context.tools);
 
     return {
       model: context.model,
       contents,
       tools: tools.length ? tools : undefined,
-      systemPrompt: context.systemPrompt,
+      systemInstruction: context.systemPrompt
+        ? { role: "system" as const, parts: [{ text: context.systemPrompt }] }
+        : undefined,
       generationConfig: {
         temperature: context.temperature,
       },
     };
   },
-  mapTools: (tools: NormalizedToolDefinition[]) => [
-    { functionDeclarations: tools.map(toGeminiTool) },
-  ],
+  mapTools: (tools: NormalizedToolDefinition[]) =>
+    tools.length ? [{ functionDeclarations: tools.map(toGeminiTool) }] : [],
   parseStreamEvent: (chunk: unknown) =>
     parseGeminiStreamChunk(chunk as GeminiStreamChunk),
 };

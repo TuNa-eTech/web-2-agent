@@ -21,6 +21,10 @@ import {
   AlertTriangle,
   Zap,
   Maximize,
+  Paperclip,
+  Square,
+  Image as ImageIcon,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -52,6 +56,7 @@ interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  attachments?: Array<{ data: string; mimeType: string; name: string }>;
 }
 
 interface ToolEvent {
@@ -157,14 +162,32 @@ const MessageBubble = ({ msg }: { msg: Message }) => (
     >
       {msg.role === "user" ? <User className="size-3" /> : <Bot className="size-3" />}
     </div>
-    <div
-      className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed shadow-sm ${
-        msg.role === "user"
-          ? "bg-primary text-primary-foreground whitespace-pre-wrap"
-          : "border bg-card text-foreground"
-      }`}
-    >
-      {msg.role === "user" ? msg.content : <MarkdownContent content={msg.content} />}
+    <div className={`max-w-[85%] flex flex-col gap-1.5 ${msg.role === "user" ? "items-end" : "items-start"}`}>
+      {msg.attachments && msg.attachments.length > 0 && (
+        <div className={`flex flex-wrap gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+          {msg.attachments.map((att, i) => (
+            <div key={i} className="relative rounded-md overflow-hidden border bg-background max-w-[200px]">
+              {att.mimeType.startsWith("image/") ? (
+                <img src={att.data.includes("base64,") ? att.data : `data:${att.mimeType};base64,${att.data}`} alt={att.name} className="max-h-32 object-cover" />
+              ) : (
+                <div className="flex items-center gap-1.5 px-3 py-2 text-[11px] text-muted-foreground">
+                  <Paperclip className="size-3" />
+                  <span className="truncate max-w-[150px]">{att.name}</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      <div
+        className={`rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed shadow-sm w-fit ${
+          msg.role === "user"
+            ? "bg-primary text-primary-foreground whitespace-pre-wrap"
+            : "border bg-card text-foreground"
+        }`}
+      >
+        {msg.role === "user" ? msg.content : <MarkdownContent content={msg.content} />}
+      </div>
     </div>
   </div>
 );
@@ -241,7 +264,7 @@ const ToolConfirmationCard = ({
   );
 };
 
-const ToolResultBadge = ({ result }: { result: NormalizedToolResult }) => {
+const ToolResultBadge = ({ result, grouped = false }: { result: NormalizedToolResult; grouped?: boolean }) => {
   const [expanded, setExpanded] = React.useState(false);
   const resultText = React.useMemo(() => {
     if (typeof result.output !== "string") {
@@ -256,7 +279,7 @@ const ToolResultBadge = ({ result }: { result: NormalizedToolResult }) => {
   }, [result.output]);
 
   return (
-    <div className="flex flex-col gap-1.5 pl-9 pb-1">
+    <div className={`flex flex-col gap-1.5 pb-1 ${grouped ? "" : "pl-9"}`}>
       <div 
         className="flex w-max cursor-pointer items-center gap-1.5 rounded-md text-[11px] text-muted-foreground outline-none transition-colors hover:text-foreground"
         onClick={() => setExpanded(!expanded)}
@@ -267,7 +290,7 @@ const ToolResultBadge = ({ result }: { result: NormalizedToolResult }) => {
           <CheckCircle2 className="size-3 shrink-0 text-green-600" />
         )}
         <span className={result.isError ? "text-destructive" : ""}>
-          {result.isError ? `Tool cancelled: ${result.name}` : `✓ ${result.name} completed`}
+          {result.isError ? `Tool cancelled / error: ${result.name}` : `✓ ${result.name} completed`}
         </span>
         <ChevronDown className={`size-3 ml-0.5 transition-transform ${expanded ? "rotate-180" : ""}`} />
       </div>
@@ -276,6 +299,36 @@ const ToolResultBadge = ({ result }: { result: NormalizedToolResult }) => {
           <pre className="text-[10px] font-mono text-muted-foreground whitespace-pre-wrap break-words">
             {resultText}
           </pre>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const CollapsibleToolGroup = ({ results }: { results: NormalizedToolResult[] }) => {
+  const [open, setOpen] = React.useState(false);
+  const errorCount = results.filter((r) => r.isError).length;
+  const successCount = results.length - errorCount;
+
+  return (
+    <div className="flex flex-col gap-1.5 pl-9 pb-1">
+      <div
+        className="flex w-max cursor-pointer items-center gap-1.5 rounded-md text-[11px] text-muted-foreground outline-none transition-colors hover:text-foreground group"
+        onClick={() => setOpen(!open)}
+      >
+        <div className="flex size-5 shrink-0 items-center justify-center rounded-full border bg-muted group-hover:bg-muted/80 transition-colors">
+          <Wrench className="size-2.5" />
+        </div>
+        <span>
+          {results.length} tool calls ({successCount} success{errorCount > 0 ? `, ${errorCount} failed` : ""})
+        </span>
+        <ChevronDown className={`size-3 ml-0.5 transition-transform ${open ? "rotate-180" : ""}`} />
+      </div>
+      {open && (
+        <div className="flex flex-col gap-1 mt-1 border-l-2 border-muted pl-4 ml-2.5">
+          {results.map((res) => (
+            <ToolResultBadge key={res.id} result={res} grouped />
+          ))}
         </div>
       )}
     </div>
@@ -414,10 +467,13 @@ export const App = () => {
   const [showHistory, setShowHistory] = React.useState(false);
   const [conversations, setConversations] = React.useState<ConversationMeta[]>([]);
   const [activeConvId, setActiveConvId] = React.useState<string | null>(null);
+  const [attachments, setAttachments] = React.useState<Array<{ data: string; mimeType: string; name: string }>>([]);
 
   const endOfMessagesRef = React.useRef<HTMLDivElement>(null);
   const portRef = React.useRef<chrome.runtime.Port | null>(null);
   const streamingTextRef = React.useRef<string>("");
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const currentTurnIdRef = React.useRef<string | null>(null);
 
   const { store, saveProvider } = useProviderSettings();
   const [activeProviderId, setActiveProviderId] = React.useState<string | null>(null);
@@ -613,6 +669,7 @@ export const App = () => {
     setMessages([]);
     setToolEvents([]);
     setInput("");
+    setAttachments([]);
     setActiveConvId(null);
     setPendingConfirmation(null);
     await setActiveConversation(null);
@@ -628,6 +685,7 @@ export const App = () => {
     setActiveConvId(meta.id);
     setMessages(msgs);
     setToolEvents([]);
+    setAttachments([]);
     setPendingConfirmation(null);
     await setActiveConversation(meta.id);
     setShowHistory(false);
@@ -653,9 +711,11 @@ export const App = () => {
   // ---------------------------------------------------------------------------
 
   const handleSend = async () => {
-    if (!input.trim() || !activeProvider || isStreaming) return;
+    if (!input.trim() && attachments.length === 0) return;
+    if (!activeProvider || isStreaming) return;
     const userText = input.trim();
     const turnId = Date.now().toString();
+    currentTurnIdRef.current = turnId;
 
     // Lazy conversation creation on first message
     let convId = activeConvId;
@@ -670,11 +730,13 @@ export const App = () => {
       setConversations(newStore.list);
     }
 
-    const userMsg: Message = { id: `${turnId}-user`, role: "user", content: userText };
+    const userMsg: Message = { id: `${turnId}-user`, role: "user", content: userText, attachments };
     const nextMessages = [...messages, userMsg];
     setMessages(nextMessages);
     setToolEvents([]);
     setInput("");
+    const attachmentsPayload = [...attachments];
+    setAttachments([]);
     setIsStreaming(true);
     streamingTextRef.current = "";
 
@@ -685,12 +747,37 @@ export const App = () => {
       type: "chat/start",
       turnId,
       message: userText,
+      attachments: attachmentsPayload,
       providerId: activeProvider.providerId,
       model: activeProvider.model,
       conversationId: convId,
       // Send history (excluding current message — orchestrator appends it)
-      history: messages.map((m) => ({ id: m.id, role: m.role, content: m.content })),
+      history: messages.map((m) => ({ id: m.id, role: m.role, content: m.content, attachments: m.attachments })),
     });
+  };
+
+  const handleStop = () => {
+    if (!isStreaming || !currentTurnIdRef.current) return;
+    portRef.current?.postMessage({ type: "chat/cancel", turnId: currentTurnIdRef.current });
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        if (result) {
+          setAttachments(prev => [...prev, { data: result, mimeType: file.type, name: file.name }]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   // ---------------------------------------------------------------------------
@@ -801,12 +888,17 @@ export const App = () => {
               <div className="flex flex-col gap-4 pb-2">
                 {messages.map((msg) => <MessageBubble key={msg.id} msg={msg} />)}
 
-                {/* Tool events inline */}
-                {toolEvents.map((ev) =>
-                  ev.type === "tool-result" && ev.result ? (
-                    <ToolResultBadge key={ev.id} result={ev.result} />
-                  ) : null,
-                )}
+                {/* Tool events inline or grouped */}
+                {(() => {
+                  const results = toolEvents
+                    .filter((ev) => ev.type === "tool-result" && ev.result)
+                    .map((ev) => ev.result!);
+                  if (results.length === 0) return null;
+                  if (results.length <= 1) {
+                    return results.map((result) => <ToolResultBadge key={result.id} result={result} />);
+                  }
+                  return <CollapsibleToolGroup results={results} />;
+                })()}
 
                 {/* Confirmation card — blocks streaming */}
                 {pendingConfirmation && (
@@ -829,11 +921,52 @@ export const App = () => {
 
           {/* Input */}
           <div className="shrink-0 border-t bg-background px-3 pt-2 pb-3">
+            {/* Attachments preview */}
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2 px-1">
+                {attachments.map((att, i) => (
+                  <div key={i} className="relative rounded-md overflow-hidden border bg-muted/30 group">
+                    {att.mimeType.startsWith("image/") ? (
+                      <img src={att.data} alt={att.name} className="h-14 w-14 object-cover" />
+                    ) : (
+                      <div className="flex h-14 w-14 flex-col items-center justify-center p-1 text-[10px] text-muted-foreground">
+                        <Paperclip className="size-4 mb-1" />
+                        <span className="truncate w-full text-center">{att.name}</span>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => removeAttachment(i)}
+                      className="absolute right-0.5 top-0.5 rounded-full bg-background/80 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background"
+                    >
+                      <X className="size-3 text-muted-foreground" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             <div
               className={`flex items-end gap-2 rounded-xl border bg-card px-2 py-1.5 shadow-sm transition-all focus-within:ring-1 ${
                 activeProvider && !pendingConfirmation ? "focus-within:ring-primary/40" : "opacity-50"
               }`}
             >
+              <Button
+                className="mb-0.5 size-7 shrink-0 rounded-lg text-muted-foreground"
+                variant="ghost"
+                disabled={!activeProvider || isStreaming || !!pendingConfirmation}
+                onClick={() => fileInputRef.current?.click()}
+                size="icon"
+                title="Attach file/image"
+              >
+                <Paperclip className="size-4" />
+              </Button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                multiple
+                accept="image/*, application/pdf, text/*"
+                onChange={handleFileSelect}
+              />
               <Textarea
                 className="min-h-[40px] max-h-28 flex-1 resize-none border-0 bg-transparent px-1.5 py-1 text-[13px] shadow-none focus-visible:ring-0"
                 disabled={!activeProvider || isStreaming || !!pendingConfirmation}
@@ -855,15 +988,29 @@ export const App = () => {
                 }
                 value={input}
               />
-              <Button
-                className="mb-0.5 size-7 shrink-0 rounded-lg"
-                disabled={!input.trim() || !activeProvider || isStreaming || !!pendingConfirmation}
-                onClick={() => void handleSend()}
-                size="icon"
-              >
-                <Send className="size-3.5" />
-                <span className="sr-only">Send</span>
-              </Button>
+              {isStreaming && !pendingConfirmation ? (
+                <Button
+                  className="mb-0.5 size-7 shrink-0 rounded-lg text-destructive hover:bg-destructive/10"
+                  variant="ghost"
+                  onClick={handleStop}
+                  size="icon"
+                  title="Stop generating"
+                >
+                  <Square className="size-3.5 fill-current" />
+                  <span className="sr-only">Stop</span>
+                </Button>
+              ) : (
+                <Button
+                  className="mb-0.5 size-7 shrink-0 rounded-lg"
+                  disabled={(!input.trim() && attachments.length === 0) || !activeProvider || isStreaming || !!pendingConfirmation}
+                  onClick={() => void handleSend()}
+                  size="icon"
+                  title="Send message"
+                >
+                  <Send className="size-3.5" />
+                  <span className="sr-only">Send</span>
+                </Button>
+              )}
             </div>
             <div className="mt-1.5 text-center text-[10px] text-muted-foreground">
               <kbd className="rounded border bg-muted px-1 py-0.5 text-[9px] font-sans font-medium">Enter</kbd> to send ·{" "}

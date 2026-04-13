@@ -20,6 +20,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 
 const MAX_AGENTIC_ITERATIONS = 6; // Safety limit to prevent infinite loops
+let geminiCallCounter = 0;
 
 export class DefaultChatOrchestrator implements ChatOrchestrator {
   private deps: ChatOrchestratorDependencies;
@@ -170,11 +171,11 @@ export class DefaultChatOrchestrator implements ChatOrchestrator {
     void
   > {
     const genAI = new GoogleGenerativeAI(apiKey);
+    const context = GeminiAdapter.buildRequest({ providerId: "gemini", model, messages, tools: tools ?? [], systemPrompt });
     const generativeModel = genAI.getGenerativeModel({
       model,
-      ...(systemPrompt ? { systemInstruction: { role: "system", parts: [{ text: systemPrompt }] } } : {}),
+      ...(context.systemInstruction ? { systemInstruction: context.systemInstruction } : {}),
     });
-    const context = GeminiAdapter.buildRequest({ providerId: "gemini", model, messages, tools: tools ?? [], systemPrompt });
 
     const streamResult = await generativeModel.generateContentStream({
       contents: context.contents as any,
@@ -189,12 +190,12 @@ export class DefaultChatOrchestrator implements ChatOrchestrator {
         return;
       }
 
-      let text = "";
-      try {
-        text = chunk.text() || "";
-      } catch (e) {
-        // SDK throws if there's no text part (e.g. only function calls)
-      }
+      // The Google Generative AI SDK throws when accessing .text() on
+      // chunks that only contain function calls. Check parts first.
+      const parts = chunk.candidates?.[0]?.content?.parts;
+      const text = parts?.some((p: any) => "text" in p)
+        ? (chunk.text() || "")
+        : "";
 
       if (text) {
         yield { type: "assistant-token", turnId, messageId: "msg", delta: text };
@@ -203,7 +204,7 @@ export class DefaultChatOrchestrator implements ChatOrchestrator {
       const functionCalls = chunk.functionCalls() ?? [];
       for (const fc of functionCalls) {
         const call: NormalizedToolCall = {
-          id: `gemini-${fc.name}`,
+          id: `gemini-${fc.name}-${++geminiCallCounter}-${Date.now().toString(36)}`,
           name: fc.name,
           arguments: fc.args as Record<string, unknown>,
         };
@@ -244,7 +245,7 @@ export class DefaultChatOrchestrator implements ChatOrchestrator {
       }
 
       if (providerId !== "gemini" && providerId !== "openai") {
-        throw new Error(`Unknown provider: ${providerId}`);
+        throw new Error(`Provider "${providerId}" is not yet supported for streaming. Currently supported: gemini, openai.`);
       }
 
       // Ensure we don't exceed provider tool limits (OpenAI and Gemini both limit to 128 tools)
@@ -254,7 +255,13 @@ export class DefaultChatOrchestrator implements ChatOrchestrator {
       // then append the current user message once.
       let messages: ChatMessage[] = [
         ...history,
-        { id: `${turnId}-user`, role: "user", content: userMessage, createdAt: this.deps.clock() },
+        { 
+          id: `${turnId}-user`, 
+          role: "user", 
+          content: userMessage, 
+          attachments: (input as any).attachments,
+          createdAt: this.deps.clock() 
+        },
       ];
 
       // Agentic loop: keep calling the LLM until no tool calls remain (max iterations)

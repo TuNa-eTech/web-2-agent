@@ -29,4 +29,12 @@ export interface PlatformAdapter {
    * Return the chat input element (contenteditable div or textarea).
    */
   getInputElement(): HTMLElement | null;
+
+  /**
+   * Inject content as a file attachment via simulated drag-and-drop.
+   * Returns true if the platform accepted the file (attachment chip appeared).
+   * Returns false if unsupported or the drop was ignored — caller should
+   * fall back to insertText().
+   */
+  injectFile?(content: string, filename: string): Promise<boolean>;
 }

@@ -6,7 +6,8 @@ const SHADOW_HOST_ID = "mcp-toolbar-shadow-host";
 
 /**
  * Create (or return existing) Shadow DOM host element.
- * The host is an inline-block div so it flows naturally in the button row.
+ * Default styles are overridden in index.tsx after creation
+ * to match the platform's layout (block row above the composer).
  */
 export const getOrCreateShadowHost = (): {
   host: HTMLElement;
@@ -20,10 +21,11 @@ export const getOrCreateShadowHost = (): {
 
   const host = document.createElement("div");
   host.id = SHADOW_HOST_ID;
-  host.style.display = "inline-flex";
+  // Base styles — overridden per-platform in index.tsx
+  host.style.display = "flex";
   host.style.alignItems = "center";
-  host.style.verticalAlign = "middle";
-  host.style.margin = "0 2px";
+  host.style.width = "100%";
+  host.style.boxSizing = "border-box";
 
   const shadow = host.attachShadow({ mode: "open" });
   return { host, shadow, isNew: true };

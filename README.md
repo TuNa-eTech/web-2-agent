@@ -1,4 +1,5 @@
 <div align="center">
+  <img src="public/icons/logo.svg" width="120" height="120" alt="Web2Agent Logo" />
 
 # 🌐 Web2Agent
 

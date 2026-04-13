@@ -31,6 +31,8 @@ With Web2Agent, you can chat with advanced LLMs while wielding any MCP server—
   <img src="public/image/Screenshot%202026-04-13%20at%2021.45.51.png" width="48%" />
   <img src="public/image/Screenshot%202026-04-13%20at%2021.45.58.png" width="48%" />
   <img src="public/image/Screenshot%202026-04-13%20at%2021.47.22.png" width="48%" />
+  <img src="public/image/Screenshot%202026-04-13%20at%2022.11.15.png" width="48%" />
+  <img src="public/image/Screenshot%202026-04-13%20at%2022.12.19.png" width="48%" />
   <br/>
   <img src="public/image/Screenshot%202026-04-13%20at%2021.50.24.png" width="96%" />
 </p>

@@ -1,56 +1,24 @@
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
-import { existsSync } from "fs";
-import { homedir } from "os";
-import { delimiter, isAbsolute, join } from "path";
 import { CompanionError } from "../types/companion";
 import { LogBuffer, type LogEntry } from "./log-buffer";
 import { StdioJsonRpcTransport, type StdioProtocolMode } from "../mcp/stdio-transport";
 import { McpRpcClient } from "../mcp/rpc-client";
 import type { RawMcpStdioServerConfig } from "../types/companion";
+import {
+  buildSpawnPath,
+  buildCommandNotFoundHint,
+  getSpawnShellOption,
+  resolveExecutablePath,
+  splitPathEntries,
+  IS_WINDOWS,
+} from "./platform";
 
 export type ProcessStatus = "starting" | "running" | "exited" | "failed";
 
 const DEFAULT_PROTOCOL_VERSION = process.env.MCP_PROTOCOL_VERSION || "2024-11-05";
 const MAX_LOG_TAIL_LENGTH = 240;
 
-const COMMON_PATH_ENTRIES =
-  process.platform === "win32"
-    ? []
-    : [
-      "/opt/homebrew/bin",
-      "/usr/local/bin",
-      "/usr/bin",
-      "/bin",
-      "/usr/sbin",
-      "/sbin",
-      `${homedir()}/.local/bin`,
-    ];
-
-const splitPathEntries = (value?: string): string[] =>
-  (value ?? "")
-    .split(delimiter)
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-
-const uniqueEntries = (entries: string[]): string[] => [...new Set(entries)];
-
-const buildSpawnPath = (existingPath?: string): string =>
-  uniqueEntries([...splitPathEntries(existingPath), ...COMMON_PATH_ENTRIES]).join(delimiter);
-
-const resolveExecutablePath = (command: string, pathValue: string): string => {
-  if (!command || command.includes("/") || command.includes("\\") || isAbsolute(command)) {
-    return command;
-  }
-
-  for (const directory of splitPathEntries(pathValue)) {
-    const candidate = join(directory, command);
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-  }
-
-  return command;
-};
+// Platform helpers are imported from ./platform
 
 const flattenLogMessage = (value: string): string => value.replace(/\s+/g, " ").trim();
 
@@ -105,7 +73,7 @@ const buildSpawnError = (
   if (error.code === "ENOENT") {
     return new CompanionError(
       "COMMAND_NOT_FOUND",
-      `Failed to start MCP command "${command}". Desktop companion PATH does not contain that executable. Use an absolute command path or ensure PATH includes Homebrew bins such as /opt/homebrew/bin.`,
+      buildCommandNotFoundHint(command),
       details,
     );
   }
@@ -150,15 +118,21 @@ export class ProcessHandle {
     const spawnEnv = buildSpawnEnv(config);
     this.spawnPath = typeof spawnEnv.PATH === "string" ? spawnEnv.PATH : "";
     this.resolvedCommand = resolveExecutablePath(config.command, this.spawnPath);
+    const useShell = getSpawnShellOption(this.resolvedCommand);
     this.systemLog.push({
       ts: new Date().toISOString(),
       stream: "system",
-      message: `spawning command: requested="${config.command}" resolved="${this.resolvedCommand}" protocol="${this.protocolMode}"`,
+      message: `spawning command: requested="${config.command}" resolved="${this.resolvedCommand}" protocol="${this.protocolMode}" platform="${process.platform}" shell=${useShell}`,
     });
 
     const child = spawn(this.resolvedCommand, config.args ?? [], {
       env: spawnEnv,
       stdio: ["pipe", "pipe", "pipe"],
+      // On Windows, batch files (.cmd/.bat) must be launched via cmd.exe.
+      // On Unix this must stay false to avoid shell argument quoting issues.
+      shell: useShell,
+      // Suppress any console window that would flash when spawning on Windows.
+      windowsHide: IS_WINDOWS,
     });
     this.child = child;
 
@@ -336,6 +310,8 @@ export class ProcessHandle {
         stdioProtocol: this.config.stdioProtocol ?? "auto",
         resolvedProtocol: this.protocolMode,
         pathPreview: splitPathEntries(this.spawnPath).slice(0, 12),
+        platform: process.platform,
+        shell: getSpawnShellOption(this.resolvedCommand),
       },
       initialized: this.initialized,
       lastError: this.lastError

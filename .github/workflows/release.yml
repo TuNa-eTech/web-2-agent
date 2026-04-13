@@ -1,0 +1,242 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  release.yml  –  Build & Publish a GitHub Release
+#
+#  Triggered by pushing a version tag:   git tag v1.2.3 && git push --tags
+#
+#  Artifacts published to the GitHub Release:
+#    • web2agent-v{VERSION}.zip          Chrome extension (upload to Web Store)
+#    • companion-macos-v{VERSION}.tar.gz Desktop companion for macOS / Linux
+#    • companion-windows-v{VERSION}.zip  Desktop companion for Windows
+# ─────────────────────────────────────────────────────────────────────────────
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"          # e.g. v1.0.0
+      - "v[0-9]+.[0-9]+.[0-9]+-*"        # e.g. v1.0.0-beta.1
+
+permissions:
+  contents: write   # needed to create/upload the GitHub Release
+
+jobs:
+  # ── Derive version from the tag ────────────────────────────────────────────
+  meta:
+    name: Extract version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - name: Parse tag → version
+        id: tag
+        run: |
+          TAG="${GITHUB_REF_NAME}"          # e.g. v1.2.3
+          VERSION="${TAG#v}"                # strip leading 'v'
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Tag: ${TAG}  →  Version: ${VERSION}"
+
+  # ── Build Chrome Extension ─────────────────────────────────────────────────
+  build-extension:
+    name: Build Chrome Extension
+    needs: meta
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Patch manifest version to ${{ env.VERSION }}
+        # Replaces `version: "0.0.0"` in manifest.config.ts with the tag version.
+        # The build step will bake this into the generated manifest.json.
+        run: |
+          sed -i "s/version: \"[^\"]*\"/version: \"${VERSION}\"/" manifest.config.ts
+          grep 'version:' manifest.config.ts   # sanity-check
+
+      - name: Build extension
+        run: npm run build
+
+      - name: Package extension ZIP
+        run: |
+          ZIP_NAME="web2agent-v${VERSION}.zip"
+          cd dist
+          zip -r "../${ZIP_NAME}" . \
+            --exclude "*.map" \
+            --exclude "*.DS_Store" \
+            --exclude "__MACOSX/*"
+          echo "ZIP_NAME=${ZIP_NAME}" >> "$GITHUB_ENV"
+
+      - name: Upload extension ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-zip
+          path: web2agent-v${{ env.VERSION }}.zip
+          retention-days: 3
+
+  # ── Build Desktop Companion ────────────────────────────────────────────────
+  build-companion:
+    name: Build Desktop Companion
+    needs: meta
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: companion/yarn.lock
+
+      - name: Install companion dependencies
+        run: yarn install --frozen-lockfile
+        working-directory: companion
+
+      - name: Build companion
+        run: yarn build
+        working-directory: companion
+
+      # ── Stage companion into a flat directory ────────────────────────────
+      # The companion dist references src/shared at runtime via relative path
+      # (tsconfig rootDir is the repo root). We replicate that layout in a
+      # staging folder so users get a self-contained archive they can extract
+      # anywhere and immediately run install-*.sh / install-*.ps1.
+      - name: Stage companion for packaging
+        run: |
+          STAGE="staging-companion"
+          mkdir -p "${STAGE}/companion/dist"
+          mkdir -p "${STAGE}/companion/scripts"
+          mkdir -p "${STAGE}/src/shared"
+
+          cp -R companion/dist/.  "${STAGE}/companion/dist/"
+          cp    companion/scripts/native-host-macos.json    "${STAGE}/companion/scripts/"
+          cp    companion/scripts/native-host-windows.json  "${STAGE}/companion/scripts/"
+          cp    companion/scripts/install-macos-manual.sh   "${STAGE}/companion/scripts/"
+          cp    companion/scripts/install-windows-manual.ps1 "${STAGE}/companion/scripts/"
+          cp -R src/shared/.  "${STAGE}/src/shared/"
+
+      # ── macOS / Linux package ────────────────────────────────────────────
+      - name: Package macOS companion (tar.gz)
+        run: |
+          TARBALL="companion-macos-v${VERSION}.tar.gz"
+          tar -czf "${TARBALL}" -C staging-companion .
+          echo "TARBALL=${TARBALL}" >> "$GITHUB_ENV"
+
+      # ── Windows package ──────────────────────────────────────────────────
+      - name: Package Windows companion (zip)
+        run: |
+          WIN_ZIP="companion-windows-v${VERSION}.zip"
+          cd staging-companion
+          zip -r "../${WIN_ZIP}" . --exclude "*.map"
+          cd ..
+          echo "WIN_ZIP=${WIN_ZIP}" >> "$GITHUB_ENV"
+
+      - name: Upload macOS companion
+        uses: actions/upload-artifact@v4
+        with:
+          name: companion-macos
+          path: companion-macos-v${{ env.VERSION }}.tar.gz
+          retention-days: 3
+
+      - name: Upload Windows companion
+        uses: actions/upload-artifact@v4
+        with:
+          name: companion-windows
+          path: companion-windows-v${{ env.VERSION }}.zip
+          retention-days: 3
+
+  # ── Create GitHub Release ──────────────────────────────────────────────────
+  release:
+    name: Publish GitHub Release
+    needs: [meta, build-extension, build-companion]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout (for changelog generation)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history for git log
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts/
+
+      - name: List artifacts
+        run: find release-artifacts/ -type f | sort
+
+      - name: Generate changelog from git log
+        id: changelog
+        run: |
+          # Get commits since the previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [[ -n "${PREV_TAG}" ]]; then
+            RANGE="${PREV_TAG}..HEAD"
+          else
+            RANGE="HEAD"
+          fi
+
+          CHANGELOG=$(git log "${RANGE}" \
+            --pretty=format:"- %s (%h)" \
+            --no-merges \
+            | head -50)
+
+          # Write multi-line output safely
+          {
+            echo "body<<EOF"
+            echo "## What's Changed"
+            echo ""
+            echo "${CHANGELOG}"
+            echo ""
+            echo "---"
+            echo ""
+            echo "### 📦 Installation"
+            echo ""
+            echo "**Chrome Extension**"
+            echo "1. Download \`web2agent-v${VERSION}.zip\`"
+            echo "2. Go to \`chrome://extensions\` → Enable Developer Mode"
+            echo "3. Drag & Drop the ZIP (or unzip and use *Load unpacked*)"
+            echo ""
+            echo "**Desktop Companion (for local stdio MCP servers)**"
+            echo ""
+            echo "macOS / Linux:"
+            echo "\`\`\`bash"
+            echo "tar -xzf companion-macos-v${VERSION}.tar.gz"
+            echo "bash companion/scripts/install-macos-manual.sh --extension-id <YOUR_EXTENSION_ID>"
+            echo "\`\`\`"
+            echo ""
+            echo "Windows (PowerShell):"
+            echo "\`\`\`powershell"
+            echo "Expand-Archive companion-windows-v${VERSION}.zip"
+            echo "powershell -ExecutionPolicy Bypass -File .\\companion\\scripts\\install-windows-manual.ps1 -ExtensionId <YOUR_EXTENSION_ID>"
+            echo "\`\`\`"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        run: |
+          gh release create "v${VERSION}" \
+            --title "Web2Agent v${VERSION}" \
+            --notes "${{ steps.changelog.outputs.body }}" \
+            --verify-tag \
+            release-artifacts/extension-zip/web2agent-v${VERSION}.zip \
+            release-artifacts/companion-macos/companion-macos-v${VERSION}.tar.gz \
+            release-artifacts/companion-windows/companion-windows-v${VERSION}.zip

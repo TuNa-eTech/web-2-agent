@@ -1,0 +1,88 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  ci.yml  –  Continuous Integration
+#
+#  Runs on every push / PR to main & develop:
+#    1. Type-check the Chrome extension (tsc --noEmit)
+#    2. Build the Chrome extension (vite build)
+#    3. Type-check + build the desktop companion
+# ─────────────────────────────────────────────────────────────────────────────
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Extension ──────────────────────────────────────────────────────────────
+  extension:
+    name: Extension – build & type-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload dist artifact (for release job)
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-dist
+          path: dist/
+          retention-days: 3
+
+  # ── Companion ──────────────────────────────────────────────────────────────
+  companion:
+    name: Companion – build & type-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: companion/yarn.lock
+
+      - name: Install companion dependencies
+        run: yarn install --frozen-lockfile
+        working-directory: companion
+
+      - name: Type-check companion
+        run: yarn tsc -p tsconfig.json --noEmit
+        working-directory: companion
+
+      - name: Build companion
+        run: yarn build
+        working-directory: companion
+
+      - name: Upload companion dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: companion-dist
+          path: |
+            companion/dist/
+          retention-days: 3

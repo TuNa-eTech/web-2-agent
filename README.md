@@ -80,6 +80,7 @@ Ensure you have the following installed before getting started:
 
 *For running local `stdio` MCP servers via the companion:*
 - Any runtime requirements for your specific servers (e.g., Python `uvx` for the Atlassian preset).
+- **Windows only:** `node.exe` must be discoverable (standard Node.js installer from nodejs.org works out-of-the-box). PowerShell execution policy must allow script execution (`Set-ExecutionPolicy RemoteSigned -Scope CurrentUser`).
 
 ---
 
@@ -122,13 +123,25 @@ To run local `stdio` MCP servers, you must install the desktop companion bridge.
 bash companion/scripts/install-macos-manual.sh --extension-id <YOUR_EXTENSION_ID>
 ```
 
-**Windows:**
+**Windows (PowerShell):**
 ```powershell
-# In PowerShell (run as Administrator if needed)
+# 1. Allow scripts if not already done (run once, any PowerShell)
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+# 2. Build the companion first (if not done yet)
+cd companion; npm run build; cd ..
+
+# 3. Install (replace <YOUR_EXTENSION_ID> with the ID shown in chrome://extensions)
 powershell -ExecutionPolicy Bypass -File .\companion\scripts\install-windows-manual.ps1 -ExtensionId <YOUR_EXTENSION_ID>
 ```
 
-> **Note:** Always remember to reload the extension in Chrome after installing or updating the companion.
+The Windows installer will:
+- Auto-detect your `node.exe` installation
+- Copy the compiled companion to `%LOCALAPPDATA%\MyWorkflowExt\`
+- Create a `.cmd` launcher that Chrome can invoke
+- Register the native host in the Windows Registry (HKCU) — **no admin needed**
+
+> **Note:** Always reload the extension in Chrome after installing or updating the companion.
 
 ---
 
@@ -191,6 +204,7 @@ Manage your servers inside the Extension's Options Page.
 |-------|--------------------------|
 | \`Companion connection disconnected\` | The native host is not installed, the ID inside the manifest is wrong, or the extension needs a manual reload. |
 | \`Failed to start MCP command...\` | The executable (like \`uvx\`) is not in your system PATH visible to Chrome. Try using absolute paths in the config. |
+| \`Failed to start MCP command\` **(Windows)** | Use an absolute path (e.g. `C:\Users\You\AppData\Roaming\npm\uvx.cmd`) or ensure `%APPDATA%\npm`, `%LOCALAPPDATA%\Programs\uv`, or the tool's installer directory is on the **system** PATH, then restart Chrome. |
 | \`MCP request timed out: initialize\` | Often a stdio framing mismatch. For \`mcp-atlassian\`, ensure \`stdioProtocol\` is explicitly set to \`"json-lines"\`. |
 | \`tools: 0\` | Transport succeeded but the server exposed no tools. Verify API keys, environment variables, or server-side filtering logic. |
 

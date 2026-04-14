@@ -1,5 +1,6 @@
-import { 
+import {
   DefaultChatOrchestrator,
+  generateAnswerSuggestions,
   type ChatPortMessage,
   type StartTurnInput,
   type NormalizedToolCall,
@@ -169,6 +170,18 @@ export const registerPortRouter = () => {
 
         if (payload.type === "chat/confirm-tool") {
           orchestrator?.submitConfirmation(payload.confirmationId, payload.decision);
+          return;
+        }
+
+        if (payload.type === "chat/suggest-request") {
+          const messageId = payload.messageId;
+          try {
+            const suggestions = await generateAnswerSuggestions(payload.question);
+            port.postMessage({ type: "chat/suggest-result", messageId, suggestions });
+          } catch (e: unknown) {
+            console.warn("[ports] suggest-request failed:", e instanceof Error ? e.message : String(e));
+            port.postMessage({ type: "chat/suggest-result", messageId, suggestions: [] });
+          }
           return;
         }
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { SkillIndex, SkillMeta, SkillContent, SkillReference, SkillInjection } from "../../core/skills/types";
+import type { SkillIndex, SkillMeta, SkillContent, SkillReference, SkillInjection, SkillKind } from "../../core/skills/types";
 import {
   loadSkillIndex,
   loadSkillContent,
@@ -40,8 +40,9 @@ export const useSkills = () => {
     references?: Omit<SkillReference, "id" | "tokenEstimate">[],
     injection?: SkillInjection,
     tags?: string[],
+    kind?: SkillKind,
   ) => {
-    await createSkill(name, description, coreContent, references, injection, tags);
+    await createSkill(name, description, coreContent, references, injection, tags, kind);
     await reload();
   };
 
@@ -54,6 +55,7 @@ export const useSkills = () => {
       references?: Omit<SkillReference, "id" | "tokenEstimate">[];
       injection?: SkillInjection;
       tags?: string[];
+      kind?: SkillKind;
     },
   ) => {
     await updateSkill(id, updates);

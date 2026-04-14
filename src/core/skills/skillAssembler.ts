@@ -1,6 +1,20 @@
 import { loadSkillIndex, loadSkillContent } from "./skillStorage";
-import type { SkillMeta, SkillContent, SkillIndex } from "./types";
+import type { SkillMeta, SkillContent, SkillIndex, SkillKind } from "./types";
 import { estimateTokens } from "./types";
+
+// ---------------------------------------------------------------------------
+// Kind → section header
+// ---------------------------------------------------------------------------
+
+const KIND_HEADERS: Record<SkillKind, string> = {
+  agent: "# Agent Role & Capabilities",
+  soul: "# Personality & Voice",
+  tools: "# Tools Reference",
+  workflow: "# Workflow To Follow",
+  general: "",
+};
+
+const KIND_ORDER: SkillKind[] = ["agent", "soul", "tools", "workflow", "general"];
 
 // ---------------------------------------------------------------------------
 // Tag matching
@@ -96,7 +110,13 @@ const buildSkillSection = (
   const coreTokens = estimateTokens(content.coreContent);
   if (coreTokens > remaining) return null;
 
-  const parts: string[] = [`## ${meta.name}\n\n${content.coreContent}`];
+  const kind = meta.kind ?? "general";
+  const kindHeader = KIND_HEADERS[kind];
+  const header = kindHeader
+    ? `${kindHeader} — ${meta.name}`
+    : `## ${meta.name}`;
+
+  const parts: string[] = [`${header}\n\n${content.coreContent}`];
   let used = coreTokens;
 
   for (const ref of content.references) {
@@ -137,9 +157,20 @@ export const assembleSystemPrompt = async (
     ? enabled.filter((s) => s.injection === "auto" && matchesTags(userMessage, s.tags))
     : [];
 
-  // Merge: always first (stable), then matched auto skills
-  const selected = [...alwaysSkills, ...autoSkills];
-  if (selected.length === 0) return undefined;
+  // Merge: always first, then matched auto skills — then re-group by kind so
+  // the final prompt reads in a natural order (agent → soul → tools → workflow → general).
+  // Within each kind, relative order (and priority) from the merge above is preserved.
+  const merged = [...alwaysSkills, ...autoSkills];
+  if (merged.length === 0) return undefined;
+
+  const byKind = new Map<SkillKind, SkillMeta[]>();
+  for (const s of merged) {
+    const k = s.kind ?? "general";
+    const bucket = byKind.get(k) ?? [];
+    bucket.push(s);
+    byKind.set(k, bucket);
+  }
+  const selected = KIND_ORDER.flatMap((k) => byKind.get(k) ?? []);
 
   let remaining = index.tokenBudget;
   const sections: string[] = [];

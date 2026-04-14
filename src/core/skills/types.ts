@@ -4,6 +4,24 @@
 
 export type SkillInjection = "always" | "auto";
 
+export type SkillKind = "general" | "agent" | "soul" | "tools" | "workflow";
+
+export const SKILL_KINDS: SkillKind[] = [
+  "general",
+  "agent",
+  "soul",
+  "tools",
+  "workflow",
+];
+
+export const SKILL_KIND_LABELS: Record<SkillKind, string> = {
+  general: "General",
+  agent: "Agent",
+  soul: "Soul",
+  tools: "Tools",
+  workflow: "Workflow",
+};
+
 export type SkillReference = {
   id: string;
   name: string;
@@ -22,6 +40,7 @@ export type SkillMeta = {
   description: string;
   enabled: boolean;
   injection: SkillInjection;
+  kind: SkillKind;
   tags: string[];
   priority: number;
   coreTokenEstimate: number;

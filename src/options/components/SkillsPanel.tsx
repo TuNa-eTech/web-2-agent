@@ -1,5 +1,5 @@
 import * as React from "react";
-import { BookOpen, Plus, Settings2 } from "lucide-react";
+import { BookOpen, FileUp, LayoutTemplate, Plus } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -19,10 +19,18 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useSkills } from "../../shared/hooks/useSkills";
 import { SkillCard } from "./SkillCard";
 import { SkillEditor } from "./SkillEditor";
-import type { SkillContent, SkillReference, SkillInjection } from "../../core/skills/types";
+import type { SkillContent, SkillReference, SkillInjection, SkillKind } from "../../core/skills/types";
+import { SKILL_KINDS, SKILL_KIND_LABELS } from "../../core/skills/types";
+import { SKILL_TEMPLATES } from "../../core/skills/templates";
+import { importSkillFromMarkdown } from "../../core/skills/fileImport";
 
 export const SkillsPanel = () => {
   const {
@@ -44,9 +52,12 @@ export const SkillsPanel = () => {
     name: string;
     description: string;
     injection: SkillInjection;
+    kind: SkillKind;
     tags: string[];
     content: SkillContent;
   } | null>(null);
+  const [kindFilter, setKindFilter] = React.useState<SkillKind | "all">("all");
+  const [templatesOpen, setTemplatesOpen] = React.useState(false);
   const [budgetInput, setBudgetInput] = React.useState(String(tokenBudget));
 
   React.useEffect(() => {
@@ -64,6 +75,17 @@ export const SkillsPanel = () => {
   const alwaysTokens = enabledSkills
     .filter((s) => s.injection === "always")
     .reduce((sum, s) => sum + s.totalTokenEstimate, 0);
+
+  const presentKinds = React.useMemo(() => {
+    const set = new Set<SkillKind>();
+    for (const s of skills) set.add(s.kind ?? "general");
+    return set;
+  }, [skills]);
+
+  const filteredSkills =
+    kindFilter === "all"
+      ? skills
+      : skills.filter((s) => (s.kind ?? "general") === kindFilter);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -95,6 +117,7 @@ export const SkillsPanel = () => {
       name: meta.name,
       description: meta.description,
       injection: meta.injection ?? "always",
+      kind: meta.kind ?? "general",
       tags: meta.tags ?? [],
       content,
     });
@@ -107,15 +130,61 @@ export const SkillsPanel = () => {
     coreContent: string;
     references: Omit<SkillReference, "id" | "tokenEstimate">[];
     injection: SkillInjection;
+    kind: SkillKind;
     tags: string[];
   }) => {
     if (editingId) {
       await update(editingId, data);
     } else {
-      await create(data.name, data.description, data.coreContent, data.references, data.injection, data.tags);
+      await create(
+        data.name,
+        data.description,
+        data.coreContent,
+        data.references,
+        data.injection,
+        data.tags,
+        data.kind,
+      );
     }
     setEditingId(null);
     setEditInitial(null);
+  };
+
+  const handleImportFile = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".md,.markdown,.txt";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const raw = await file.text();
+      const imported = importSkillFromMarkdown(file.name, raw);
+      await create(
+        imported.name,
+        imported.description,
+        imported.coreContent,
+        [],
+        imported.injection,
+        imported.tags,
+        imported.kind,
+      );
+    };
+    input.click();
+  };
+
+  const handleUseTemplate = async (kind: SkillKind) => {
+    const tpl = SKILL_TEMPLATES[kind];
+    setTemplatesOpen(false);
+    setEditingId(null);
+    setEditInitial({
+      name: tpl.name,
+      description: tpl.description,
+      injection: tpl.injection,
+      kind: tpl.kind,
+      tags: tpl.tags,
+      content: { coreContent: tpl.coreContent, references: [] },
+    });
+    setEditorOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -153,13 +222,47 @@ export const SkillsPanel = () => {
             Skills
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Manage knowledge packs injected into the AI system prompt.
+            Manage instruction packs (AGENTS, SOUL, TOOLS, WORKFLOW…) injected into the AI system prompt.
           </p>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={handleNewSkill}>
-          <Plus className="size-3.5" />
-          New Skill
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={handleImportFile}
+          >
+            <FileUp className="size-3.5" />
+            Import .md
+          </Button>
+          <Popover open={templatesOpen} onOpenChange={setTemplatesOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <LayoutTemplate className="size-3.5" />
+                Templates
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-64 p-1">
+              {SKILL_KINDS.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => void handleUseTemplate(k)}
+                  className="flex w-full flex-col items-start gap-0.5 rounded px-2 py-1.5 text-left text-xs hover:bg-accent"
+                >
+                  <span className="font-medium">{SKILL_KIND_LABELS[k]}</span>
+                  <span className="text-[10px] text-muted-foreground line-clamp-1">
+                    {SKILL_TEMPLATES[k].description}
+                  </span>
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
+          <Button size="sm" className="gap-1.5" onClick={handleNewSkill}>
+            <Plus className="size-3.5" />
+            New Skill
+          </Button>
+        </div>
       </div>
 
       {/* Summary bar */}
@@ -193,6 +296,40 @@ export const SkillsPanel = () => {
 
       <Separator />
 
+      {/* Kind filter — only show when user has more than one kind */}
+      {presentKinds.size > 1 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setKindFilter("all")}
+            className={`rounded-full border px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+              kindFilter === "all"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border text-muted-foreground hover:border-foreground/30"
+            }`}
+          >
+            All ({skills.length})
+          </button>
+          {SKILL_KINDS.filter((k) => presentKinds.has(k)).map((k) => {
+            const count = skills.filter((s) => (s.kind ?? "general") === k).length;
+            return (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setKindFilter(k)}
+                className={`rounded-full border px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                  kindFilter === k
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:border-foreground/30"
+                }`}
+              >
+                {SKILL_KIND_LABELS[k]} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Skill list with drag-and-drop */}
       {skills.length === 0 ? (
         <div className="text-center py-8">
@@ -209,11 +346,11 @@ export const SkillsPanel = () => {
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={skills.map((s) => s.id)}
+            items={filteredSkills.map((s) => s.id)}
             strategy={verticalListSortingStrategy}
           >
             <div className="space-y-2">
-              {skills.map((skill) => (
+              {filteredSkills.map((skill) => (
                 <SkillCard
                   key={skill.id}
                   skill={skill}
@@ -222,6 +359,11 @@ export const SkillsPanel = () => {
                   onDelete={handleDelete}
                 />
               ))}
+              {filteredSkills.length === 0 && (
+                <p className="py-4 text-center text-xs text-muted-foreground">
+                  No skills in this category.
+                </p>
+              )}
             </div>
           </SortableContext>
         </DndContext>

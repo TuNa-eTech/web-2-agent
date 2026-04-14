@@ -15,30 +15,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { estimateTokens } from "../../core/skills/types";
-import type { SkillContent, SkillReference, SkillInjection } from "../../core/skills/types";
+import { estimateTokens, SKILL_KINDS, SKILL_KIND_LABELS } from "../../core/skills/types";
+import type { SkillContent, SkillReference, SkillInjection, SkillKind } from "../../core/skills/types";
+import { importSkillFromMarkdown } from "../../core/skills/fileImport";
 
 type ReferenceInput = { name: string; content: string };
-
-const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
-
-/** Parse YAML-like frontmatter (simple key: value pairs) */
-const parseFrontmatter = (
-  raw: string,
-): { meta: Record<string, string>; body: string } | null => {
-  const match = raw.match(FRONTMATTER_RE);
-  if (!match) return null;
-
-  const meta: Record<string, string> = {};
-  for (const line of match[1].split(/\r?\n/)) {
-    const idx = line.indexOf(":");
-    if (idx === -1) continue;
-    const key = line.slice(0, idx).trim().toLowerCase();
-    const value = line.slice(idx + 1).trim();
-    if (key && value) meta[key] = value;
-  }
-  return { meta, body: match[2] };
-};
 
 type SkillEditorProps = {
   open: boolean;
@@ -47,6 +28,7 @@ type SkillEditorProps = {
     name: string;
     description: string;
     injection: SkillInjection;
+    kind: SkillKind;
     tags: string[];
     content: SkillContent;
   };
@@ -56,6 +38,7 @@ type SkillEditorProps = {
     coreContent: string;
     references: Omit<SkillReference, "id" | "tokenEstimate">[];
     injection: SkillInjection;
+    kind: SkillKind;
     tags: string[];
   }) => void;
 };
@@ -71,6 +54,7 @@ export const SkillEditor = ({
   const [coreContent, setCoreContent] = React.useState("");
   const [references, setReferences] = React.useState<ReferenceInput[]>([]);
   const [injection, setInjection] = React.useState<SkillInjection>("always");
+  const [kind, setKind] = React.useState<SkillKind>("general");
   const [tagsInput, setTagsInput] = React.useState("");
 
   React.useEffect(() => {
@@ -82,6 +66,7 @@ export const SkillEditor = ({
         initial.content.references.map((r) => ({ name: r.name, content: r.content })),
       );
       setInjection(initial.injection);
+      setKind(initial.kind ?? "general");
       setTagsInput(initial.tags.join(", "));
     } else if (open) {
       setName("");
@@ -89,6 +74,7 @@ export const SkillEditor = ({
       setCoreContent("");
       setReferences([]);
       setInjection("always");
+      setKind("general");
       setTagsInput("");
     }
   }, [open, initial]);
@@ -105,16 +91,13 @@ export const SkillEditor = ({
       const file = input.files?.[0];
       if (!file) return;
       const raw = await file.text();
-      const parsed = parseFrontmatter(raw);
-      if (parsed) {
-        if (parsed.meta.name) setName(parsed.meta.name);
-        if (parsed.meta.description) setDescription(parsed.meta.description);
-        setCoreContent(parsed.body.trimStart());
-      } else {
-        // No frontmatter — treat entire content as core content
-        setCoreContent(raw);
-        if (!name) setName(file.name.replace(/\.[^.]+$/, ""));
-      }
+      const imported = importSkillFromMarkdown(file.name, raw);
+      setName(imported.name);
+      if (imported.description) setDescription(imported.description);
+      setCoreContent(imported.coreContent);
+      setInjection(imported.injection);
+      setKind(imported.kind);
+      if (imported.tags.length > 0) setTagsInput(imported.tags.join(", "));
     };
     input.click();
   };
@@ -153,6 +136,7 @@ export const SkillEditor = ({
       coreContent,
       references: references.map((r) => ({ name: r.name, content: r.content })),
       injection,
+      kind,
       tags: parsedTags,
     });
     onOpenChange(false);
@@ -198,6 +182,30 @@ export const SkillEditor = ({
               placeholder="Brief description of what this skill provides"
               className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
+          </div>
+
+          {/* Kind */}
+          <div className="space-y-2">
+            <Label>Kind</Label>
+            <div className="grid grid-cols-5 gap-2">
+              {SKILL_KINDS.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setKind(k)}
+                  className={`rounded-md border px-2 py-1.5 text-xs font-medium transition-colors ${
+                    kind === k
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-transparent text-muted-foreground hover:border-foreground/30"
+                  }`}
+                >
+                  {SKILL_KIND_LABELS[k]}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Agent, Soul, Tools, and Workflow get a labeled section in the system prompt.
+            </p>
           </div>
 
           {/* Injection Mode */}

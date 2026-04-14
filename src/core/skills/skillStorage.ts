@@ -6,6 +6,7 @@ import {
   type SkillContent,
   type SkillReference,
   type SkillInjection,
+  type SkillKind,
   EMPTY_SKILL_INDEX,
   estimateTokens,
 } from "./types";
@@ -22,7 +23,12 @@ const shortId = () => Math.random().toString(36).slice(2, 10);
 
 export const loadSkillIndex = async (): Promise<SkillIndex> => {
   const stored = await getStorageItem<SkillIndex>(STORAGE_KEYS.skillIndex);
-  return stored ?? { ...EMPTY_SKILL_INDEX, skills: [] };
+  if (!stored) return { ...EMPTY_SKILL_INDEX, skills: [] };
+  // Migrate legacy skills missing `kind` to "general" in-memory.
+  return {
+    ...stored,
+    skills: stored.skills.map((s) => ({ ...s, kind: s.kind ?? "general" })),
+  };
 };
 
 export const saveSkillIndex = (index: SkillIndex): Promise<void> =>
@@ -50,6 +56,7 @@ export const createSkill = async (
   references: Omit<SkillReference, "id" | "tokenEstimate">[] = [],
   injection: SkillInjection = "always",
   tags: string[] = [],
+  kind: SkillKind = "general",
 ): Promise<SkillMeta> => {
   const index = await loadSkillIndex();
   const now = new Date().toISOString();
@@ -71,6 +78,7 @@ export const createSkill = async (
     description,
     enabled: true,
     injection,
+    kind,
     tags,
     priority: index.skills.length,
     coreTokenEstimate,
@@ -99,6 +107,7 @@ export const updateSkill = async (
     references?: Omit<SkillReference, "id" | "tokenEstimate">[];
     injection?: SkillInjection;
     tags?: string[];
+    kind?: SkillKind;
   },
 ): Promise<void> => {
   const [index, existingContent] = await Promise.all([
@@ -131,6 +140,7 @@ export const updateSkill = async (
             name: updates.name ?? s.name,
             description: updates.description ?? s.description,
             injection: updates.injection ?? s.injection,
+            kind: updates.kind ?? s.kind ?? "general",
             tags: updates.tags ?? s.tags,
             coreTokenEstimate,
             totalTokenEstimate,

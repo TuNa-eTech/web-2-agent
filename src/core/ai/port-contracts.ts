@@ -17,6 +17,8 @@ export type ChatPortLifecycle =
   | "closed"
   | "error";
 
+export type AnswerSuggestion = { label: string; text: string };
+
 export type SidepanelToBackgroundPortMessage =
   | {
       type: "chat/hello";
@@ -45,6 +47,11 @@ export type SidepanelToBackgroundPortMessage =
       type: "chat/confirm-tool";
       confirmationId: string;
       decision: ConfirmationDecision;
+    }
+  | {
+      type: "chat/suggest-request";
+      messageId: string;
+      question: string;
     };
 
 export type BackgroundToSidepanelPortMessage =
@@ -87,6 +94,11 @@ export type BackgroundToSidepanelPortMessage =
       type: "chat/done";
       turnId: string;
       reason?: string;
+    }
+  | {
+      type: "chat/suggest-result";
+      messageId: string;
+      suggestions: AnswerSuggestion[];
     };
 
 export type ChatPortMessage =

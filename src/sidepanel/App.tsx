@@ -34,8 +34,9 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useProviderSettings } from "../shared/hooks/useProviderSettings";
 import { fetchModelsForProvider, type ModelInfo } from "../core/ai/model-fetcher";
 import type { ProviderConfig } from "../shared/types";
-import type { BackgroundToSidepanelPortMessage } from "../core/ai/port-contracts";
+import type { AnswerSuggestion, BackgroundToSidepanelPortMessage } from "../core/ai/port-contracts";
 import type { ConfirmationRequest, NormalizedToolResult } from "../core/ai/types";
+import { detectConfirmationQuestion } from "./utils/detectConfirmationQuestion";
 import {
   loadConversationIndex,
   loadMessages,
@@ -468,6 +469,8 @@ export const App = () => {
   const [conversations, setConversations] = React.useState<ConversationMeta[]>([]);
   const [activeConvId, setActiveConvId] = React.useState<string | null>(null);
   const [attachments, setAttachments] = React.useState<Array<{ data: string; mimeType: string; name: string }>>([]);
+  const [suggestions, setSuggestions] = React.useState<AnswerSuggestion[]>([]);
+  const [suggestionsForMessageId, setSuggestionsForMessageId] = React.useState<string | null>(null);
 
   const endOfMessagesRef = React.useRef<HTMLDivElement>(null);
   const portRef = React.useRef<chrome.runtime.Port | null>(null);
@@ -583,9 +586,31 @@ export const App = () => {
         setPendingConfirmation(null);
         setMessages((prev) => {
           void saveCurrentConversation(prev);
+          const lastAssistant = [...prev].reverse().find((m) => m.role === "assistant");
+          if (lastAssistant && lastAssistant.content.trim()) {
+            const detection = detectConfirmationQuestion(lastAssistant.content);
+            if (detection.matched && detection.question) {
+              portRef.current?.postMessage({
+                type: "chat/suggest-request",
+                messageId: lastAssistant.id,
+                question: detection.question,
+              });
+            }
+          }
           return prev;
         });
         streamingTextRef.current = "";
+      }
+
+      if (payload.type === "chat/suggest-result") {
+        setMessages((prev) => {
+          const lastAssistant = [...prev].reverse().find((m) => m.role === "assistant");
+          if (lastAssistant && lastAssistant.id === payload.messageId) {
+            setSuggestions(payload.suggestions);
+            setSuggestionsForMessageId(payload.messageId);
+          }
+          return prev;
+        });
       }
 
       if (payload.type === "chat/error") {
@@ -672,6 +697,8 @@ export const App = () => {
     setAttachments([]);
     setActiveConvId(null);
     setPendingConfirmation(null);
+    setSuggestions([]);
+    setSuggestionsForMessageId(null);
     await setActiveConversation(null);
     setShowHistory(false);
   };
@@ -687,6 +714,8 @@ export const App = () => {
     setToolEvents([]);
     setAttachments([]);
     setPendingConfirmation(null);
+    setSuggestions([]);
+    setSuggestionsForMessageId(null);
     await setActiveConversation(meta.id);
     setShowHistory(false);
   };
@@ -711,6 +740,8 @@ export const App = () => {
   // ---------------------------------------------------------------------------
 
   const handleSend = async () => {
+    setSuggestions([]);
+    setSuggestionsForMessageId(null);
     if (!input.trim() && attachments.length === 0) return;
     if (!activeProvider || isStreaming) return;
     const userText = input.trim();
@@ -918,6 +949,29 @@ export const App = () => {
               </div>
             )}
           </ScrollArea>
+
+          {/* Suggestion chips */}
+          {suggestions.length > 0 && (
+            <div className="shrink-0 border-t bg-background px-3 pt-2 pb-1">
+              <div className="flex flex-wrap gap-1.5">
+                {suggestions.map((chip, i) => (
+                  <button
+                    key={`${suggestionsForMessageId}-${i}`}
+                    type="button"
+                    onClick={() => {
+                      setInput(chip.text);
+                      setSuggestions([]);
+                      setSuggestionsForMessageId(null);
+                    }}
+                    className="rounded-full border bg-muted/60 px-3 py-1 text-[11px] text-foreground hover:bg-muted transition-colors"
+                    title={chip.text}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Input */}
           <div className="shrink-0 border-t bg-background px-3 pt-2 pb-3">

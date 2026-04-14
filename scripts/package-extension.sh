@@ -44,9 +44,11 @@ done
 
 # ── Get version from manifest.config.ts ───────
 get_version() {
-  grep -E 'version:\s*"[^"]+"' "$MANIFEST_CONFIG" \
+  grep -v 'manifest_version' "$MANIFEST_CONFIG" \
+    | grep 'version:' \
     | head -1 \
-    | sed -E 's/.*version:\s*"([^"]+)".*/\1/'
+    | tr -d '\r' \
+    | awk -F'"' '{print $2}'
 }
 
 VERSION=$(get_version)
@@ -84,7 +86,7 @@ MANIFEST_IN_DIST="$DIST_DIR/manifest.json"
 [[ -f "$MANIFEST_IN_DIST" ]] || error "manifest.json không có trong dist/"
 
 # Verify version match
-DIST_VERSION=$(grep -E '"version"' "$MANIFEST_IN_DIST" | head -1 | sed -E 's/.*"version":\s*"([^"]+)".*/\1/')
+DIST_VERSION=$(grep '"version"' "$MANIFEST_IN_DIST" | grep -v 'manifest_version' | head -1 | tr -d '\r' | awk -F'"' '{print $4}')
 if [[ "$DIST_VERSION" != "$VERSION" ]]; then
   warn "Version trong dist/manifest.json ($DIST_VERSION) khác với manifest.config.ts ($VERSION)"
 fi
@@ -100,12 +102,35 @@ step "Tạo file ZIP..."
 # Remove existing zip nếu có
 [[ -f "$OUTPUT_PATH" ]] && { rm "$OUTPUT_PATH"; warn "Đã xóa bản ZIP cũ"; }
 
+# Remove "key" field from manifest.json (not allowed in Chrome Web Store)
+MANIFEST_JSON="$DIST_DIR/manifest.json"
+MANIFEST_BACKUP="$DIST_DIR/manifest.json.bak"
+
+if grep -q '"key"' "$MANIFEST_JSON" 2>/dev/null; then
+  cp "$MANIFEST_JSON" "$MANIFEST_BACKUP"
+  python3 -c "
+import json, sys
+with open('$MANIFEST_JSON', 'r') as f:
+    m = json.load(f)
+m.pop('key', None)
+with open('$MANIFEST_JSON', 'w') as f:
+    json.dump(m, f, indent=2, ensure_ascii=False)
+"
+  warn "Đã xóa field 'key' khỏi manifest.json (không được phép trên Store)"
+fi
+
 cd "$DIST_DIR"
 zip -r "$OUTPUT_PATH" . \
   --exclude "*.map" \
   --exclude "*.DS_Store" \
   --exclude "__MACOSX/*" \
+  --exclude "*.bak" \
   -q
+
+# Restore manifest.json gốc
+if [[ -f "$MANIFEST_BACKUP" ]]; then
+  mv "$MANIFEST_BACKUP" "$MANIFEST_JSON"
+fi
 
 success "Đã tạo: $OUTPUT_PATH"
 

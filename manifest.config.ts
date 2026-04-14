@@ -6,7 +6,7 @@ const EXTENSION_PUBLIC_KEY =
 export default defineManifest({
   manifest_version: 3,
   name: "Web2Agent",
-  version: "0.0.0",
+  version: "0.0.1",
   key: EXTENSION_PUBLIC_KEY,
   description: "Connect your browser to AI agents and MCP tools. Chat with Gemini and ChatGPT while wielding any MCP server — local or remote.",
   action: {},
